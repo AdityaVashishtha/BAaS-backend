@@ -1,0 +1,26 @@
+{
+  "name": "dashboard-backend",
+  "version": "1.0.0",
+  "description": "Backend for Generated App for managing App",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://AdityaVashishtha@bitbucket.org/codeyapa/backend-dashboard-1.0.0.git"
+  },
+  "keywords": [
+    "BAaS",
+    "Backend",
+    "Application",
+    "Generation"
+  ],
+  "author": "SaSaS",
+  "license": "ISC",
+  "homepage": "https://bitbucket.org/codeyapa/backend-dashboard-1.0.0#readme",
+  "dependencies": {
+    "express": "^4.16.2"
+  }
+}
