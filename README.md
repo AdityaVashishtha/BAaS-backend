@@ -13,3 +13,4 @@ Backend part of generated application, APIs to handle by angular front end.
 ## Structure
 ----------
 1. Backend for generated application, it will use angular app as front end.
+2. Main folder will be `config` we will try to put most of dynamic content that will decide the flow of application into `config` foler.
