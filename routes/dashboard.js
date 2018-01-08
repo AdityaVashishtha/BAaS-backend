@@ -47,8 +47,8 @@ router.post('/register',(req,res)=>{
 
 
 router.post('/authenticate',(req,res)=>{     
-    //console.log(req.headers.authorization);      
-    let rUser = req.body.user;    
+    //console.log(req);      
+    let rUser = req.body;    
     //TODO user check in schema logic
     DashboardUser.findUserByUsername(rUser.username,(err,user)=>{        
         if(err) 
@@ -68,7 +68,8 @@ router.post('/authenticate',(req,res)=>{
                             data: {
                                 token: 'Bearer '+token,
                                 user: user
-                            }
+                            },
+                            message: "User Succesfully logged in"
                         });
                     }            
                 });

@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const passport = require('passport');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const cors = require('cors');
 
 //Custom Requires
 const apiRoute = require('./routes/main_api');
@@ -30,6 +31,7 @@ db.once('open',()=>{
 });
 
 //Middleware setup
+app.use(cors());
 app.use(express.static(path.join(__dirname,'public')));
 app.use(bodyParser.json());
 
