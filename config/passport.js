@@ -7,8 +7,8 @@ const DashboardUser = require('./models/dashboard-user');
 module.exports = function(passport) {
     let opts = {};
     opts.jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken();            
-    opts.secretOrKey = APP_CONFIG.app_secret;
-    passport.use(new JwtStrategy(opts, (jwt_payload,done)=>{        
+    opts.secretOrKey = APP_CONFIG.app_secret;    
+    passport.use(new JwtStrategy(opts, (jwt_payload,done)=>{                 
         DashboardUser.findUserByUsername(jwt_payload.username,(err,user)=>{
             if(err) 
                 done(err,false);

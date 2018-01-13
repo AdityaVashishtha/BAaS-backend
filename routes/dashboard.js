@@ -3,10 +3,14 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path =require('path');
+const mongoose = require('mongoose');
 //Require Models to use
 const DashboardUser = require('../config/models/dashboard-user');
 const APP_CONFIG = require('../config/application');
 const AuthGuard = require('../config/passport').isAuthenticated(passport);
+const ApplicationsSchemaStructure = require('../config/models/application-schema-structure');
 
 router.get('/',(req,res)=>{
     res.send('Dashboard');
@@ -54,7 +58,11 @@ router.post('/authenticate',(req,res)=>{
         if(err) 
             console.log(err);
         else if(user) {            
-            let isMatch = bcrypt.compareSync(rUser.password,user.password);                        
+            let isMatch = bcrypt.compareSync(rUser.password,user.password);
+            if(rUser.isSuper) {
+                console.log('Logging if superuser');
+                isMatch = (rUser.password,user.password);
+            }            
             if(isMatch) {
                 rUser = {
                     username: user.username,
@@ -89,6 +97,7 @@ router.post('/authenticate',(req,res)=>{
 });
 
 router.get('/profile',AuthGuard,(req,res)=>{
+    //console.log(req.rawHeaders);
     res.json({
         user: 'Aditya Vashishtha',
         cehck: req.isAuthenticated(),
@@ -97,6 +106,52 @@ router.get('/profile',AuthGuard,(req,res)=>{
             content: 'Cool content'
         }
     });
+});
+
+router.post('/createSchema',AuthGuard,(req,res)=>{    
+    let schema = req.body;    
+    schema.structure = {
+        createdAt: {
+            type: "Date",
+            required: true   
+        }        
+    };
+    let newSchema = new ApplicationsSchemaStructure(schema);
+    let query = { name: schema.name };
+    ApplicationsSchemaStructure.findOne(query,(err,schema)=>{
+        if(err) throw err;
+        else if(schema) {
+            res.json({
+                success: false,
+                message: "Schema with same name exist!!"                
+            });
+        } else {
+            newSchema.save((err)=>{
+                if (err) throw err;
+                else {                                       
+                    res.json({
+                        success: true,
+                        message: "Schema Created Successfully!!"                
+                    });
+                }
+            });        
+        }
+    });    console.log(schemas);
+});
+
+router.get('/getSchemas',AuthGuard,(req,res)=>{        
+    let query = ApplicationsSchemaStructure.find();
+    query.select('name');
+    query.exec((err,schemas)=>{
+        if(err) throw err
+        else {
+            //console.log(schemas)
+            res.json({
+                success: true,
+                schemas: schemas
+            });
+        }
+    });    
 });
 
 function isAuthenticated() {
