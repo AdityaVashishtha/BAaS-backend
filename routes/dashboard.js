@@ -11,10 +11,13 @@ const DashboardUser = require('../config/models/dashboard-user');
 const APP_CONFIG = require('../config/application');
 const AuthGuard = require('../config/passport').isAuthenticated(passport);
 const ApplicationsSchemaStructure = require('../config/models/application-schema-structure');
+const apiHitPoint = require('./dashboard/main-api');
 
 router.get('/',(req,res)=>{
     res.send('Dashboard');
 });
+
+router.use('/api',apiHitPoint);
 
 router.post('/register',(req,res)=>{    
     let user = req.body.user;
@@ -110,12 +113,7 @@ router.get('/profile',AuthGuard,(req,res)=>{
 
 router.post('/createSchema',AuthGuard,(req,res)=>{    
     let schema = req.body;    
-    schema.structure = {
-        createdAt: {
-            type: "Date",
-            required: true   
-        }        
-    };
+    schema.structure = {};
     let newSchema = new ApplicationsSchemaStructure(schema);
     let query = { name: schema.name };
     ApplicationsSchemaStructure.findOne(query,(err,schema)=>{
@@ -136,7 +134,7 @@ router.post('/createSchema',AuthGuard,(req,res)=>{
                 }
             });        
         }
-    });    console.log(schemas);
+    });
 });
 
 router.get('/getSchemas',AuthGuard,(req,res)=>{        
@@ -152,6 +150,111 @@ router.get('/getSchemas',AuthGuard,(req,res)=>{
             });
         }
     });    
+});
+
+router.get('/table/:tableName',AuthGuard,(req,res)=>{
+    let tableName = req.params.tableName;    
+    var query = ApplicationsSchemaStructure.findOne({name: tableName});
+    query.exec((err,data)=>{
+        if (err) throw err;
+        else if(data !== null) {  
+            let schema;
+            try {
+                schema = mongoose.model(tableName);
+            } catch(err) {                
+                schema = ApplicationsSchemaStructure.getSchemaModel(tableName,data.structure);
+            }            
+            query = schema.find();
+            query.exec((err,rows)=>{
+                if(err) throw err;
+                else {                    
+                    res.json({
+                        success: true,
+                        data: {
+                            structure: data.structure,
+                            rows: rows
+                        },
+                        message: "Fetch Succesfull!!"
+                    });                                 
+                }
+            });            
+        } else {
+            res.json({
+                success: false,
+                data: null,
+                message: "Nothing found!!"
+            });   
+        }
+    });    
+});
+
+router.post('/addAttribute',AuthGuard,(req,res)=>{
+    let attribute = req.body;
+    let table = req.body.schema;
+    let query = {name: table};
+    ApplicationsSchemaStructure.findOne(query,(err,data)=>{
+        //console.log("DDDKD");
+        if(err) throw err
+        else if(data !== null){
+            //console.log("INTI - ");
+            let structure={};
+            if(data.structure)
+                structure = data.structure;
+            structure[attribute.name] = { type : attribute.type}
+            let update = {structure: structure};
+            let options = { multi: false };
+            ApplicationsSchemaStructure.update(query, update, options, (err,numAffected)=>{
+                if(err) throw err;
+                else if(numAffected.n == 1) {
+                    console.log("Looks like success");
+                    res.json({
+                        success: true,
+                        message: "Attribute Added succesfully!!"
+                    });
+                } else {
+                    res.json({
+                        success: false,
+                        message: "Something not right!!"
+                    });
+                }
+            });
+        } else {
+            res.json({
+                success: false,
+                message: "Some Error in adding attribute found!!"
+            });
+        }
+    });
+});
+
+router.post('/insertData',AuthGuard,(req,res)=>{
+    let query = req.body.data;
+    let schemaName = req.body.schema;    
+    ApplicationsSchemaStructure.validateBeforeInSchema(query,schemaName,(err,returnBack)=>{
+        if(err) throw err;
+        else {
+            if(returnBack.success) {
+                let Schema;
+                try {
+                    Schema = mongoose.model(schemaName);
+                } catch(err) {                
+                    Schema = ApplicationsSchemaStructure.getSchemaModel(schemaName,{any:{}});
+                }    
+                let doc = new Schema(query);
+                doc.save(err=>{
+                    if(err) throw err;
+                    else {
+                        res.json({
+                            success: true,
+                            message: "Data Inserted Successfully!!"
+                        });
+                    }
+                })
+            } else {
+                res.json(returnBack);
+            }
+        }
+    });                
 });
 
 function isAuthenticated() {
