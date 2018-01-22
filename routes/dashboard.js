@@ -12,6 +12,8 @@ const APP_CONFIG = require('../config/application');
 const AuthGuard = require('../config/passport').isAuthenticated(passport);
 const ApplicationsSchemaStructure = require('../config/models/application-schema-structure');
 const apiHitPoint = require('./dashboard/main-api');
+//after routes added
+const RouteStructure = require('../config/models/route-structure');
 
 router.get('/',(req,res)=>{
     res.send('Dashboard');
@@ -255,6 +257,41 @@ router.post('/insertData',AuthGuard,(req,res)=>{
             }
         }
     });                
+});
+
+router.post('/addRoute',(req,res)=>{
+    let routeModel = req.body;
+    let routeData = {
+        name: routeModel.name,
+        schemaName: routeModel.schemaName,
+        operationType: routeModel.operationType,
+        requestBody: routeModel.requestBody,    
+        constraints: routeModel.constraint,
+        accessControl: routeModel.accessControl,
+        createdAt: new Date(),
+    }
+    let route = new RouteStructure(routeData);
+    //console.log(route);
+    query={name: routeData.name, schemaName: routeData.schemaName};
+    RouteStructure.findOne(query,(err,data)=>{
+        if(err) throw err;
+        else if(data) {
+            res.json({
+                success: false,
+                message: "Route with same name and schema already exists!!",
+            });
+        } else {
+            route.save(err=>{
+                if(err) throw err;
+                else {
+                    res.json({
+                        success: true,
+                        message: "Route created successfully!!",
+                    });
+                }
+            });
+        }
+    });    
 });
 
 function isAuthenticated() {
