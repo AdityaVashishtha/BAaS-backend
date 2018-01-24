@@ -115,7 +115,21 @@ router.get('/profile',AuthGuard,(req,res)=>{
 
 router.post('/createSchema',AuthGuard,(req,res)=>{    
     let schema = req.body;    
-    schema.structure = {};
+    schema.structure = {
+        _id: {
+            type: "id",
+            require: true,
+            unique: true
+        },
+        _insertAt: {
+            type: "date",
+            require: true,
+        },
+        _updated: {
+            type: "date",
+            require: true,
+        }
+    };
     let newSchema = new ApplicationsSchemaStructure(schema);
     let query = { name: schema.name };
     ApplicationsSchemaStructure.findOne(query,(err,schema)=>{
@@ -191,9 +205,9 @@ router.get('/table/:tableName',AuthGuard,(req,res)=>{
 });
 
 router.post('/addAttribute',AuthGuard,(req,res)=>{
-    let attribute = req.body;
-    let table = req.body.schema;
-    let query = {name: table};
+    let attribute = req.body;    
+    let query = {name: attribute.schema};
+    console.log(attribute);
     ApplicationsSchemaStructure.findOne(query,(err,data)=>{
         //console.log("DDDKD");
         if(err) throw err
@@ -202,13 +216,14 @@ router.post('/addAttribute',AuthGuard,(req,res)=>{
             let structure={};
             if(data.structure)
                 structure = data.structure;
-            structure[attribute.name] = { type : attribute.type}
+            delete attribute.schema;
+            structure[attribute.name] = attribute;
             let update = {structure: structure};
             let options = { multi: false };
             ApplicationsSchemaStructure.update(query, update, options, (err,numAffected)=>{
                 if(err) throw err;
                 else if(numAffected.n == 1) {
-                    console.log("Looks like success");
+                    console.log("Todo-add create index for unique entries");
                     res.json({
                         success: true,
                         message: "Attribute Added succesfully!!"
@@ -223,7 +238,7 @@ router.post('/addAttribute',AuthGuard,(req,res)=>{
         } else {
             res.json({
                 success: false,
-                message: "Some Error in adding attribute found!!"
+                message: "Error in adding attribute : Schema not found!!"
             });
         }
     });
@@ -231,32 +246,51 @@ router.post('/addAttribute',AuthGuard,(req,res)=>{
 
 router.post('/insertData',AuthGuard,(req,res)=>{
     let query = req.body.data;
-    let schemaName = req.body.schema;    
-    ApplicationsSchemaStructure.validateBeforeInSchema(query,schemaName,(err,returnBack)=>{
+    let schemaName = req.body.schema;   
+    //Async call to validator !! under construction
+    ApplicationsSchemaStructure.layeredValidationBeforeInsert(query,schemaName,(err,result)=>{
         if(err) throw err;
-        else {
-            if(returnBack.success) {
-                let Schema;
-                try {
-                    Schema = mongoose.model(schemaName);
-                } catch(err) {                
-                    Schema = ApplicationsSchemaStructure.getSchemaModel(schemaName,{any:{}});
-                }    
-                let doc = new Schema(query);
-                doc.save(err=>{
-                    if(err) throw err;
-                    else {
-                        res.json({
-                            success: true,
-                            message: "Data Inserted Successfully!!"
-                        });
-                    }
-                })
-            } else {
-                res.json(returnBack);
-            }
+        else if(result !== null) {
+            res.json({
+                success: false,
+                message: result.message
+            });
+        } else {
+            // do stuff here 
+            res.json({
+                success: true,
+                message: "No error todo converter",
+            });
         }
-    });                
+    });
+    // ApplicationsSchemaStructure.validateBeforeInSchema(query,schemaName,(err,returnBack)=>{
+    //     if(err) throw err;
+    //     else {
+    //         if(returnBack.success) {
+    //             let Schema;
+    //             try {
+    //                 Schema = mongoose.model(schemaName);
+    //             } catch(err) {                
+    //                 Schema = ApplicationsSchemaStructure.getSchemaModel(schemaName,{any:{}});
+    //             }    
+    //             delete query._id;
+    //             query._insertAt = new Date().toDateString();
+    //             query._updated = new Date().toDateString();
+    //             let doc = new Schema(query);
+    //             doc.save(err=>{
+    //                 if(err) throw err;
+    //                 else {
+    //                     res.json({
+    //                         success: true,
+    //                         message: "Data Inserted Successfully!!"
+    //                     });
+    //                 }
+    //             })
+    //         } else {
+    //             res.json(returnBack);
+    //         }
+    //     }
+    // });         
 });
 
 router.post('/addRoute',(req,res)=>{
@@ -293,6 +327,26 @@ router.post('/addRoute',(req,res)=>{
         }
     });    
 });
+
+router.post('/getRoutes',(req,res)=>{
+    let schemaName = req.body.schemaName;
+    query = { schemaName: schemaName};
+    RouteStructure.find(query,(err,data)=>{
+        if(err) throw err;
+        else if(data) {
+            res.json({
+                success: true,
+                message: "Routes Fetch success",
+                data: data,
+            })
+        } else {
+            res.json({
+                success: false,
+                message: "Route fetch unsuccessfull",
+            })
+        }
+    })    
+})
 
 function isAuthenticated() {
     return passport.authenticate('jwt', { session: false });
