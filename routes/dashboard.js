@@ -204,6 +204,29 @@ router.get('/table/:tableName',AuthGuard,(req,res)=>{
     });    
 });
 
+router.get('/getSchemaDetail/:tableName',AuthGuard,(req,res)=>{
+    let tableName = req.params.tableName;    
+    var query = ApplicationsSchemaStructure.findOne({name: tableName});
+    query.exec((err,data)=>{
+        if (err) throw err;
+        else if(data !== null) {                      
+            res.json({
+                success: true,
+                data: {
+                    structure: data.structure
+                },
+                message: "Fetch Succesfull!!"
+            });                                    
+        } else {
+            res.json({
+                success: false,
+                data: null,
+                message: "Nothing found!!"
+            });   
+        }
+    });  
+});
+
 router.post('/addAttribute',AuthGuard,(req,res)=>{
     let attribute = req.body;    
     let query = {name: attribute.schema};
@@ -250,16 +273,37 @@ router.post('/insertData',AuthGuard,(req,res)=>{
     //Async call to validator !! under construction
     ApplicationsSchemaStructure.layeredValidationBeforeInsert(query,schemaName,(err,result)=>{
         if(err) throw err;
-        else if(result !== null) {
+        else if(result == null) {
             res.json({
                 success: false,
-                message: result.message
+                message: "Some error occured !!",
             });
-        } else {
+        } else if(result.error) {
             // do stuff here 
             res.json({
-                success: true,
-                message: "No error todo converter",
+                success: false,
+                message: result.message,
+            });
+        } else {
+            let schema;
+            try {
+                schema = mongoose.model(schemaName);
+            } catch(err) {                
+                schema = ApplicationsSchemaStructure.getSchemaModel(schemaName,{any:{}});
+            }    
+            query = result.row;
+            delete query._id;
+            query._insertAt = new Date().toDateString()+ ' ' + new Date().toTimeString() ;
+            query._updated = new Date().toDateString()+ ' ' + new Date().toTimeString();
+            let doc = new schema(query);
+            doc.save(err=>{
+                if(err) throw err;
+                else {
+                    res.json({
+                        success: true,
+                        message: "Data Inserted Successfully!!"
+                    });
+                }
             });
         }
     });

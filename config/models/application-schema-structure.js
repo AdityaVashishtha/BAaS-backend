@@ -47,7 +47,7 @@ module.exports.layeredValidationBeforeInsert = function(row,schema,callback) {
                     console.log(response);
                     callback(null,response);
                 } else {
-                    callback(null,null);
+                    callback(null,response);
                 }                
             }
         } else {
@@ -123,15 +123,18 @@ function validateTypes(row,structure,schemaName) {
                 error: true,
                 message: "Error: Data type not match for '"+bodyKeys[i]+"' !",
             };
+        } else {
+            row[bodyKeys[i]] = convertToStandard(row[bodyKeys[i]],structure[bodyKeys[i]].type);
         }
     }
     return {
-        error: false
+        error: false,
+        row: row,
     }
 }
 
 function isValid(value,type) {
-    value = value.toString();
+    value = value.toString().trim();
     switch(type) {
         case 'string': return true;
         case 'number': return validator.isNumeric(value);                
@@ -149,9 +152,32 @@ function isValid(value,type) {
         case 'url': return validator.isURL(value);  
         case 'mobile-phone': return validator.isMobilePhone(value);
         case 'regex-validator-todo': console.log("TODO Custom Validator"); return false;
-        default: return false;
+        default: return true;
     }
     return false;
+}
+
+function convertToStandard(value,type){
+    value = value.toString().trim();
+    switch(type) {
+        case 'string': return value;
+        case 'number': return parseFloat(value);                
+        case 'boolean': return value == 'true' ? true : false;      
+        case 'json': return value;
+        case 'enum-todo': console.log("TODO ENUM"); return false;
+        case 'date-iso': return new Date(value);      
+        case 'timestamp': return parseInt(value);
+        case 'integer': return parseInt(value);                
+        case 'decimal-only': return parseFloat(value);
+        case 'hexadecimal-number': return value;
+        case 'array': return value;
+        case 'alphanumeric-only': return value;
+        case 'email': return value;
+        case 'url': return value;  
+        case 'mobile-phone': return value;
+        case 'regex-validator-todo': console.log("TODO Custom Validator"); return false;
+        default: return false;
+    } 
 }
 
 module.exports.validateBeforeInSchema = function(row,schema,callback) {

@@ -160,6 +160,101 @@ router.post('/auth', (req, res) => {
     }
 });
 
+// Adding Insert Option
+router.post('/insert/:schema/:routeName', (req, res) => {
+    let token='',isLoggedIn=false;
+    if(req.headers.authorization)
+        token = req.headers.authorization.split(' ')[1];
+    isLoggedIn = loggedIn(token);
+    let query = {
+        name: req.params.routeName,
+        schemaName: req.params.schema
+    };
+    RouteStructure.findOne(query, (err, data) => {
+        if (err) throw err;
+        else if(data) {
+            if(data.accessControl == 'public') {
+                isLoggedIn = true;
+            } 
+            if(isLoggedIn) {
+                let Schema, query;
+                try {
+                    Schema = mongoose.model(data.schemaName);
+                } catch (err) {
+                    Schema = ApplicationsSchemaStructure.getSchemaModel(data.schemaName, {});
+                }
+                let requestBodyFromStructure = data.requestBody;
+                let requestBodyActual = Object.keys(req.body);
+                let insertDoc = {};
+                if(req.body.insertDoc) {
+                    insertDoc = req.body.insertDoc;
+                }
+                console.log(insertDoc);
+                //res.json({test: true});
+                query = insertDoc;
+                schemaName = data.schemaName;
+                ApplicationsSchemaStructure.layeredValidationBeforeInsert(query,schemaName,(err,result)=>{
+                    if(err) throw err;
+                    else if(result == null) {
+                        res.json({
+                            success: false,
+                            message: "Some error occured !!",
+                        });
+                    } else if(result.error) {
+                        // do stuff here 
+                        res.json({
+                            success: false,
+                            message: result.message,
+                        });
+                    } else {
+                        let schema;
+                        try {
+                            schema = mongoose.model(schemaName);
+                        } catch(err) {                
+                            schema = ApplicationsSchemaStructure.getSchemaModel(schemaName,{any:{}});
+                        }    
+                        query = result.row;
+                        delete query._id;
+                        query._insertAt = new Date().toDateString()+ ' ' + new Date().toTimeString() ;
+                        query._updated = new Date().toDateString()+ ' ' + new Date().toTimeString();
+                        let doc = new schema(query);
+                        doc.save(err=>{
+                            if(err) throw err;
+                            else {
+                                res.json({
+                                    success: true,
+                                    message: "Data Inserted Successfully!!"
+                                });
+                            }
+                        });
+                    }
+                });
+                // query = Schema(insertDoc);
+                // query.save((err, data) => {
+                //     if (err) throw err;                
+                //     if(data) {
+                //         res.json({
+                //             success: true,
+                //             count: data.length,
+                //             data: data,                        
+                //         });
+                //     } else {
+                //         res.json({
+                //             success: false,
+                //             message: "Some Error in Insertion",
+                //         })
+                //     }
+                // });
+            } else {
+                res.status(401).send();
+            }                        
+        } else {
+            res.status(404).send();
+        }
+    });
+});
+
+
 router.post('/find/:schema/:routeName', (req, res) => {
     let token='',isLoggedIn=false;
     if(req.headers.authorization)
