@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
-const path =require('path');
+const path = require('path');
 const mongoose = require('mongoose');
 //Require Models to use
 const DashboardUser = require('../config/models/dashboard-user');
@@ -12,33 +12,34 @@ const APP_CONFIG = require('../config/application');
 const AuthGuard = require('../config/passport').isAuthenticated(passport);
 const ApplicationsSchemaStructure = require('../config/models/application-schema-structure');
 const apiHitPoint = require('./dashboard/main-api');
+const ApplicationConfig = require('../config/models/application-config');
 //after routes added
 const RouteStructure = require('../config/models/route-structure');
 
-router.get('/',(req,res)=>{
+router.get('/', (req, res) => {
     res.send('Dashboard');
 });
 
-router.use('/api',apiHitPoint);
+router.use('/api', apiHitPoint);
 
-router.post('/register',(req,res)=>{    
+router.post('/register', (req, res) => {
     let user = req.body.user;
     let salt = bcrypt.genSaltSync(10);
     let hash = bcrypt.hashSync(user.password, salt);
     user.password = hash;
-    user.createdAt = new Date();    
-    let newUser = new DashboardUser(user); 
-    DashboardUser.findUserByUsername(user.username,(err,user)=>{
-        if(err)
+    user.createdAt = new Date();
+    let newUser = new DashboardUser(user);
+    DashboardUser.findUserByUsername(user.username, (err, user) => {
+        if (err)
             console.log(err);
-        else if(user) {
+        else if (user) {
             res.json({
                 success: false,
                 msg: 'User already registerd!!',
             });
         } else {
-            newUser.save((err)=>{
-                if(err) throw err;
+            newUser.save((err) => {
+                if (err) throw err;
                 else {
                     res.json({
                         success: true,
@@ -50,58 +51,61 @@ router.post('/register',(req,res)=>{
                 }
             });
         }
-    });       
+    });
     //res.send(req.body.user);
 });
 
 
-router.post('/authenticate',(req,res)=>{     
+router.post('/authenticate', (req, res) => {
     //console.log(req);      
-    let rUser = req.body;    
+    let rUser = req.body;
     //TODO user check in schema logic
-    DashboardUser.findUserByUsername(rUser.username,(err,user)=>{        
-        if(err) 
+    DashboardUser.findUserByUsername(rUser.username, (err, user) => {
+        if (err)
             console.log(err);
-        else if(user) {            
-            let isMatch = bcrypt.compareSync(rUser.password,user.password);
-            if(rUser.isSuper) {
+        else if (user) {
+            let isMatch = bcrypt.compareSync(rUser.password, user.password);
+            if (rUser.isSuper) {
                 console.log('Logging if superuser');
-                isMatch = (rUser.password,user.password);
-            }            
-            if(isMatch) {
+                isMatch = (rUser.password, user.password);
+            }
+            if (isMatch) {
                 rUser = {
                     username: user.username,
-                    fullname: user.fullname
+                    fullname: user.fullname,
+                    type: 'admin'
                 }
-                jwt.sign(rUser, APP_CONFIG.app_secret , { expiresIn: '1h' }, function(err, token) {
-                    if(err) throw err;
+                jwt.sign(rUser, APP_CONFIG.app_secret, {
+                    expiresIn: '1h'
+                }, function (err, token) {
+                    if (err) throw err;
                     else {
                         res.json({
                             success: true,
                             data: {
-                                token: 'Bearer '+token,
+                                token: 'Bearer ' + token,
                                 user: user
                             },
                             message: "User Succesfully logged in"
                         });
-                    }            
+                    }
                 });
             } else {
                 res.json({
                     success: false,
                     message: 'Invalid Credentials.'
                 });
-            }  
+            }
         } else {
             res.json({
                 success: false,
                 message: 'No such user found.'
             });
         }
-    });          
+    });
 });
 
-router.get('/profile',AuthGuard,(req,res)=>{
+router.get('/profile', AuthGuard, (req, res) => {
     //console.log(req.rawHeaders);
     res.json({
         user: 'Aditya Vashishtha',
@@ -113,8 +117,8 @@ router.get('/profile',AuthGuard,(req,res)=>{
     });
 });
 
-router.post('/createSchema',AuthGuard,(req,res)=>{    
-    let schema = req.body;    
+router.post('/createSchema', AuthGuard, (req, res) => {
+    let schema = req.body;
     schema.structure = {
         _id: {
             type: "id",
@@ -131,33 +135,35 @@ router.post('/createSchema',AuthGuard,(req,res)=>{
         }
     };
     let newSchema = new ApplicationsSchemaStructure(schema);
-    let query = { name: schema.name };
-    ApplicationsSchemaStructure.findOne(query,(err,schema)=>{
-        if(err) throw err;
-        else if(schema) {
+    let query = {
+        name: schema.name
+    };
+    ApplicationsSchemaStructure.findOne(query, (err, schema) => {
+        if (err) throw err;
+        else if (schema) {
             res.json({
                 success: false,
-                message: "Schema with same name exist!!"                
+                message: "Schema with same name exist!!"
             });
         } else {
-            newSchema.save((err)=>{
+            newSchema.save((err) => {
                 if (err) throw err;
-                else {                                       
+                else {
                     res.json({
                         success: true,
-                        message: "Schema Created Successfully!!"                
+                        message: "Schema Created Successfully!!"
                     });
                 }
-            });        
+            });
         }
     });
 });
 
-router.get('/getSchemas',AuthGuard,(req,res)=>{        
+router.get('/getSchemas', AuthGuard, (req, res) => {
     let query = ApplicationsSchemaStructure.find();
     query.select('name');
-    query.exec((err,schemas)=>{
-        if(err) throw err
+    query.exec((err, schemas) => {
+        if (err) throw err
         else {
             //console.log(schemas)
             res.json({
@@ -165,25 +171,27 @@ router.get('/getSchemas',AuthGuard,(req,res)=>{
                 schemas: schemas
             });
         }
-    });    
+    });
 });
 
-router.get('/table/:tableName',AuthGuard,(req,res)=>{
-    let tableName = req.params.tableName;    
-    var query = ApplicationsSchemaStructure.findOne({name: tableName});
-    query.exec((err,data)=>{
+router.get('/table/:tableName', AuthGuard, (req, res) => {
+    let tableName = req.params.tableName;
+    var query = ApplicationsSchemaStructure.findOne({
+        name: tableName
+    });
+    query.exec((err, data) => {
         if (err) throw err;
-        else if(data !== null) {  
+        else if (data !== null) {
             let schema;
             try {
                 schema = mongoose.model(tableName);
-            } catch(err) {                
-                schema = ApplicationsSchemaStructure.getSchemaModel(tableName,data.structure);
-            }            
+            } catch (err) {
+                schema = ApplicationsSchemaStructure.getSchemaModel(tableName, data.structure);
+            }
             query = schema.find();
-            query.exec((err,rows)=>{
-                if(err) throw err;
-                else {                    
+            query.exec((err, rows) => {
+                if (err) throw err;
+                else {
                     res.json({
                         success: true,
                         data: {
@@ -191,61 +199,69 @@ router.get('/table/:tableName',AuthGuard,(req,res)=>{
                             rows: rows
                         },
                         message: "Fetch Succesfull!!"
-                    });                                 
+                    });
                 }
-            });            
+            });
         } else {
             res.json({
                 success: false,
                 data: null,
                 message: "Nothing found!!"
-            });   
+            });
         }
-    });    
+    });
 });
 
-router.get('/getSchemaDetail/:tableName',AuthGuard,(req,res)=>{
-    let tableName = req.params.tableName;    
-    var query = ApplicationsSchemaStructure.findOne({name: tableName});
-    query.exec((err,data)=>{
+router.get('/getSchemaDetail/:tableName', AuthGuard, (req, res) => {
+    let tableName = req.params.tableName;
+    var query = ApplicationsSchemaStructure.findOne({
+        name: tableName
+    });
+    query.exec((err, data) => {
         if (err) throw err;
-        else if(data !== null) {                      
+        else if (data !== null) {
             res.json({
                 success: true,
                 data: {
                     structure: data.structure
                 },
                 message: "Fetch Succesfull!!"
-            });                                    
+            });
         } else {
             res.json({
                 success: false,
                 data: null,
                 message: "Nothing found!!"
-            });   
+            });
         }
-    });  
+    });
 });
 
-router.post('/addAttribute',AuthGuard,(req,res)=>{
-    let attribute = req.body;    
-    let query = {name: attribute.schema};
+router.post('/addAttribute', AuthGuard, (req, res) => {
+    let attribute = req.body;
+    let query = {
+        name: attribute.schema
+    };
     console.log(attribute);
-    ApplicationsSchemaStructure.findOne(query,(err,data)=>{
+    ApplicationsSchemaStructure.findOne(query, (err, data) => {
         //console.log("DDDKD");
-        if(err) throw err
-        else if(data !== null){
+        if (err) throw err
+        else if (data !== null) {
             //console.log("INTI - ");
-            let structure={};
-            if(data.structure)
+            let structure = {};
+            if (data.structure)
                 structure = data.structure;
             delete attribute.schema;
             structure[attribute.name] = attribute;
-            let update = {structure: structure};
-            let options = { multi: false };
-            ApplicationsSchemaStructure.update(query, update, options, (err,numAffected)=>{
-                if(err) throw err;
-                else if(numAffected.n == 1) {
+            let update = {
+                structure: structure
+            };
+            let options = {
+                multi: false
+            };
+            ApplicationsSchemaStructure.update(query, update, options, (err, numAffected) => {
+                if (err) throw err;
+                else if (numAffected.n == 1) {
                     console.log("Todo-add create index for unique entries");
                     res.json({
                         success: true,
@@ -267,18 +283,18 @@ router.post('/addAttribute',AuthGuard,(req,res)=>{
     });
 });
 
-router.post('/insertData',AuthGuard,(req,res)=>{
+router.post('/insertData', AuthGuard, (req, res) => {
     let query = req.body.data;
-    let schemaName = req.body.schema;   
+    let schemaName = req.body.schema;
     //Async call to validator !! under construction
-    ApplicationsSchemaStructure.layeredValidationBeforeInsert(query,schemaName,(err,result)=>{
-        if(err) throw err;
-        else if(result == null) {
+    ApplicationsSchemaStructure.layeredValidationBeforeInsert(query, schemaName, (err, result) => {
+        if (err) throw err;
+        else if (result == null) {
             res.json({
                 success: false,
                 message: "Some error occured !!",
             });
-        } else if(result.error) {
+        } else if (result.error) {
             // do stuff here 
             res.json({
                 success: false,
@@ -288,16 +304,18 @@ router.post('/insertData',AuthGuard,(req,res)=>{
             let schema;
             try {
                 schema = mongoose.model(schemaName);
-            } catch(err) {                
-                schema = ApplicationsSchemaStructure.getSchemaModel(schemaName,{any:{}});
-            }    
+            } catch (err) {
+                schema = ApplicationsSchemaStructure.getSchemaModel(schemaName, {
+                    any: {}
+                });
+            }
             query = result.row;
             delete query._id;
-            query._insertAt = new Date().toDateString()+ ' ' + new Date().toTimeString() ;
-            query._updated = new Date().toDateString()+ ' ' + new Date().toTimeString();
+            query._insertAt = new Date().toDateString() + ' ' + new Date().toTimeString();
+            query._updated = new Date().toDateString() + ' ' + new Date().toTimeString();
             let doc = new schema(query);
-            doc.save(err=>{
-                if(err) throw err;
+            doc.save(err => {
+                if (err) throw err;
                 else {
                     res.json({
                         success: true,
@@ -337,30 +355,33 @@ router.post('/insertData',AuthGuard,(req,res)=>{
     // });         
 });
 
-router.post('/addRoute',(req,res)=>{
+router.post('/addRoute',AuthGuard, (req, res) => {
     let routeModel = req.body;
     let routeData = {
         name: routeModel.name,
         schemaName: routeModel.schemaName,
         operationType: routeModel.operationType,
-        requestBody: routeModel.requestBody,    
+        requestBody: routeModel.requestBody,
         constraints: routeModel.constraint,
         accessControl: routeModel.accessControl,
         createdAt: new Date(),
     }
     let route = new RouteStructure(routeData);
     //console.log(route);
-    query={name: routeData.name, schemaName: routeData.schemaName};
-    RouteStructure.findOne(query,(err,data)=>{
-        if(err) throw err;
-        else if(data) {
+    query = {
+        name: routeData.name,
+        schemaName: routeData.schemaName
+    };
+    RouteStructure.findOne(query, (err, data) => {
+        if (err) throw err;
+        else if (data) {
             res.json({
                 success: false,
                 message: "Route with same name and schema already exists!!",
             });
         } else {
-            route.save(err=>{
-                if(err) throw err;
+            route.save(err => {
+                if (err) throw err;
                 else {
                     res.json({
                         success: true,
@@ -369,15 +390,17 @@ router.post('/addRoute',(req,res)=>{
                 }
             });
         }
-    });    
+    });
 });
 
-router.post('/getRoutes',(req,res)=>{
+router.post('/getRoutes',AuthGuard, (req, res) => {
     let schemaName = req.body.schemaName;
-    query = { schemaName: schemaName};
-    RouteStructure.find(query,(err,data)=>{
-        if(err) throw err;
-        else if(data) {
+    query = {
+        schemaName: schemaName
+    };
+    RouteStructure.find(query, (err, data) => {
+        if (err) throw err;
+        else if (data) {
             res.json({
                 success: true,
                 message: "Routes Fetch success",
@@ -389,11 +412,63 @@ router.post('/getRoutes',(req,res)=>{
                 message: "Route fetch unsuccessfull",
             })
         }
-    })    
-})
+    })
+});
+
+router.get('/getAuthenticationConfig',(req,res)=>{
+    ApplicationConfig.findOne({name: 'auth'},(err,config)=>{
+        if(err) throw err;
+        else if(config != null) {
+            res.json({
+                success: true,
+                message: "Config loaded successfully!!",
+                data: config,
+            });
+        } else {
+            res.json({
+                success: false,
+                message: "Some Error Occured"
+            })
+        }
+    });
+});
+
+router.post('/setAuthenticationConfig',(req,res)=>{    
+    let config = req.body;
+    if(config != null) {
+        let query = {            
+            config: config,
+            modifiedAt: new Date(),
+        }
+        ApplicationConfig.update({name: 'auth'},query,(err,data)=>{
+            if(err) throw err;
+            else if(data && data.n ==1 ) {
+                res.json({
+                    success: true,
+                    message: "Configurations Saved Successfully!!"
+                });
+            } else {
+                res.json({
+                    success: false,
+                    message: "Some error occured in saving configurations!"
+                })
+            }      
+        });
+    }
+});
+
+router.get('/getApplicationDetails',AuthGuard,(req,res)=>{
+    res.json({
+        success: true,
+        message: "Application Details Fetched",
+        config: APP_CONFIG
+    });
+});
 
 function isAuthenticated() {
-    return passport.authenticate('jwt', { session: false });
+    return passport.authenticate('jwt', {
+        session: false
+    });
 }
 
 

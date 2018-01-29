@@ -269,7 +269,9 @@ router.post('/find/:schema/:routeName', (req, res) => {
         else if(data) {
             if(data.accessControl == 'public') {
                 isLoggedIn = true;
-            } 
+            } else if(data.accessControl == 'admin') {
+                isLoggedIn = require('../config/passport').isLoggedIn(token);
+            }
             if(isLoggedIn) {
                 let Schema, query;
                 try {
@@ -534,8 +536,8 @@ router.get("/profile", guardRoute, (req, res) => {
     });
 });
 
-router.delete('/test',(req,res)=>{
-    console.log(req);
+router.get('/test',(req,res)=>{
+    console.log(req.body);
     res.json(req.rawHeaders);
 });
 
