@@ -16,6 +16,10 @@ const ApplicationConfig = require('../config/models/application-config');
 //after routes added
 const RouteStructure = require('../config/models/route-structure');
 
+// Declaration of constants 
+USER_TABLE_NAME = 'authuser';
+
+
 router.get('/', (req, res) => {
     res.send('Dashboard');
 });
@@ -76,7 +80,7 @@ router.post('/authenticate', (req, res) => {
                     type: 'admin'
                 }
                 jwt.sign(rUser, APP_CONFIG.app_secret, {
-                    expiresIn: '1h'
+                    expiresIn: '240h'
                 }, function (err, token) {
                     if (err) throw err;
                     else {
@@ -157,6 +161,60 @@ router.post('/createSchema', AuthGuard, (req, res) => {
             });
         }
     });
+});
+
+router.post('/deleteSchema',AuthGuard,(req,res)=>{
+    let schema = req.body;
+    if(schema.name) {
+        if(schema.name == USER_TABLE_NAME) {
+            res.json({
+                success: false,
+                message: "Can not delete user('"+USER_TABLE_NAME+"') table",
+            });
+        }
+        else if(schema.mode && schema.mode == 'archive') {
+            res.json({
+                success: false,
+                message: "Archive Functionality need to be added"
+            });
+        } else {   
+            console.log("Started deleting schema : '"+schema.name+"' ...");
+            RouteStructure.remove({ schemaName: schema.name},(err,data)=>{
+                if(err) throw err;
+                else if(data) {
+                    console.log(data);
+                    ApplicationsSchemaStructure.remove({name: schema.name},(err,data)=>{
+                        if(err) throw err;
+                        else if(data) {
+                            console.log(data);                            
+                            let ModalSchema;
+                            try {
+                                ModalSchema = mongoose.model(schema.name);
+                            } catch (err) {
+                                ModalSchema = ApplicationsSchemaStructure.getSchemaModel(schema.name,{});                                
+                            }
+                            ModalSchema.collection.drop({},(err,data)=>{
+                                if(err) throw err;
+                                else if(data) {
+                                    console.log(data);
+                                    res.json({
+                                        success: true,
+                                        message: "Schema with routes completely removed!!"
+                                    })
+                                }
+                            });
+                        }
+                    })                    
+                }
+            });        
+            console.log("Finished deleting schema : '"+schema.name+"' ...");   
+        }        
+    } else {
+        res.json({
+            success: false,
+            message: "Error: Request Body not found",
+        });
+    }
 });
 
 router.get('/getSchemas', AuthGuard, (req, res) => {
@@ -314,12 +372,14 @@ router.post('/insertData', AuthGuard, (req, res) => {
             query._insertAt = new Date().toDateString() + ' ' + new Date().toTimeString();
             query._updated = new Date().toDateString() + ' ' + new Date().toTimeString();
             let doc = new schema(query);
+            let tempDoc = doc;
             doc.save(err => {
                 if (err) throw err;
                 else {
                     res.json({
                         success: true,
-                        message: "Data Inserted Successfully!!"
+                        message: "Data Inserted Successfully!!",
+                        data: tempDoc,
                     });
                 }
             });
@@ -353,6 +413,47 @@ router.post('/insertData', AuthGuard, (req, res) => {
     //         }
     //     }
     // });         
+});
+
+router.post('/deleteData',AuthGuard,(req,res)=>{
+    if(req.body) {
+        let query = req.body.data;
+        let schemaName = req.body.schema;
+        if(query && schemaName) {
+            let ModalSchema;
+            try {
+                ModalSchema = mongoose.model(schemaName);
+            } catch (err) {
+                ModalSchema = ApplicationsSchemaStructure.getSchemaModel(schemaName,{});
+            }
+            ModalSchema.remove(query,(err,data)=>{
+                if(err) throw err;
+                else if(data!=null && data.n > 0 ) {
+                    res.json({
+                        success: true,
+                        message: "Data Deleted Successfully",
+                        //data: data
+                    });
+                } else {
+                    res.json({
+                        success: false,
+                        message: "DataBase Error: Error in deleting document!"
+                    })
+                }
+            });
+
+        } else {
+            res.json({
+                success: false,
+                message: "Error: Request body is deformed!"
+            });
+        }
+    } else {
+        res.json({
+            success: false,
+            message: "Error: Request body is empty!"
+        });
+    }    
 });
 
 router.post('/addRoute',AuthGuard, (req, res) => {

@@ -35,79 +35,97 @@ module.exports.layeredValidationBeforeInsert = function(row,schema,callback) {
     ApplicationsSchemaStructure.findOne(query,(err,data)=>{
         if(err) callback(err,null);
         else if (data !== null) {
-            response = schemaMatch(row,data.structure,schema);
-            if(response.error) {
-                console.log("Matching Structure Error ...")
-                console.log(response);                
-                callback(null,response);
-            } else {
-                response = validateTypes(row,data.structure,schema);                
+            schemaMatch(row,data.structure,schema,(response)=>{
                 if(response.error) {
-                    console.log("Validation Type Error ...")
-                    console.log(response);
+                    console.log("Matching Structure Error ...")
+                    console.log(response);                
                     callback(null,response);
                 } else {
-                    callback(null,response);
-                }                
-            }
+                    response = validateTypes(row,data.structure,schema);                
+                    if(response.error) {
+                        console.log("Validation Type Error ...")
+                        console.log(response);
+                        callback(null,response);
+                    } else {
+                        callback(null,response);
+                    }                
+                }
+            });            
         } else {
             callback(null,null);
         }
     });  
 }
 
-function schemaMatch(row, structure,schemaName) {
+function schemaMatch(row, structure,schemaName,callback) {
+    let flag = true;
     let bodyKeys = Object.keys(row);
     let structureKeys = Object.keys(structure);
     let bodyKeysLength = bodyKeys.length;
     let structureKeysLength = structureKeys.length;
     //Matching body with structure to 
-    for(i=0;i<bodyKeysLength;i++) {
+    console.log('Matching Structure - Body');
+    for(i=0;i<bodyKeysLength && flag;i++) {
         if(typeof structure[bodyKeys[i]] == 'undefined') {
-            return {
+            flag = false;
+            callback({
                 error: true,
                 message: "Error: Request body values does not match the schema Structure!",
-            };
-        }
+            });
+        } 
     }
     //Matching required Constraint
-    for(i=0;i<bodyKeysLength;i++) {
+    console.log('Matching Required Constraint');
+    for(i=0;i<bodyKeysLength && flag;i++) {
         if(structure[bodyKeys[i]].isRequired) {
             if(row[bodyKeys[i]] == null || row[bodyKeys[i]].toString().length <=0) {
-                return {
+                flag = false;
+                callback({
                     error: true,
                     message: "Error: Attribute '"+bodyKeys[i]+"' is required in schema but not provided!",
-                };
-            }            
-        }
-    }
+                });                
+            }  
+        }        
+    }    
     //Matching Unique key constraint
-    for(i=0;i<bodyKeysLength;i++) {
+    console.log('Matching Unique - Body');
+    for(i=0;i<bodyKeysLength && flag;i++) {
         if(structure[bodyKeys[i]].isUnique) {
+            flag = false; 
+            let attrName = bodyKeys[i];
             let query = {};
-            query[bodyKeys[i]] = row[bodyKeys[i]];
+            query[bodyKeys[i]] = convertToStandard(row[bodyKeys[i]],structure[bodyKeys[i]].type);
             let schema;
             try {
                 schema = mongoose.model(schemaName);
             } catch(err) {                
                 schema = ApplicationsSchemaStructure.getSchemaModel(schemaName,{});
             }
-            console.log("Unique key constraint - TODOM")
+            console.log("Unique key constraint Check start ...");
+           // console.log(query);
             schema.findOne(query,(err,data)=>{
                 if(err) throw err;
-                else if(data !== null) {
-                    return {
+                else if(data != null) {
+                    console.log("Not Unique !! Fixed ?");
+                    //console.log(data);
+                    callback({
                         error: true,
-                        message: "Error: Attribute '"+bodyKeys[i]+"' is unique no duplicate allowed!",
-                    };
-                }
+                        message: "Error: Attribute '"+attrName+"' is unique no duplicate allowed!",
+                    });
+                } else {
+                    callback({
+                        error: false
+                    });
+                }                    
             });
         }
-    }
-    return {
-        error: false
-    }  
-    console.log(structure);
+        if(i == bodyKeysLength || flag == true) {
+            callback({
+                error: false
+            });
+        }
+    }    
+    //console.log(structure);
 }
 
 //Function for Validation of data types as per schema 
@@ -135,6 +153,8 @@ function validateTypes(row,structure,schemaName) {
 
 function isValid(value,type) {
     value = value.toString().trim();
+    if(value.length <= 0) 
+        return true;
     switch(type) {
         case 'string': return true;
         case 'number': return validator.isNumeric(value);                
@@ -159,6 +179,9 @@ function isValid(value,type) {
 
 function convertToStandard(value,type){
     value = value.toString().trim();
+    //console.log(value);
+    if(value.length <= 0)
+        return null;
     switch(type) {
         case 'string': return value;
         case 'number': return parseFloat(value);                
