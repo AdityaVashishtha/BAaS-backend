@@ -8,6 +8,10 @@ const jwt = require('jsonwebtoken');
 
 const ApplicationsSchemaStructure = require('../config/models/application-schema-structure');
 const RouteStructure = require('../config/models/route-structure');
+const ApplicationConfig = require('../config/models/application-config');
+
+require('../config/passport-oauth-google')(passport);
+
 const APP_CONFIG = require('../config/application');
 var tableName = 'authUser';
 var authConfigs = {
@@ -126,8 +130,9 @@ router.post('/auth', (req, res) => {
                     }, function (err, token) {
                         if (err) throw err;
                         else {
+                            newUser.authType = 'api.user';
                             res.json({
-                                success: true,
+                                success: true,                                
                                 data: {
                                     token: 'Bearer ' + token,
                                     user: newUser
@@ -140,7 +145,7 @@ router.post('/auth', (req, res) => {
                     res.json({
                         success: false,
                         message: 'Invalid Username or password'
-                    })
+                    });
                 }
             } else {
                 res.json({
@@ -159,6 +164,52 @@ router.post('/auth', (req, res) => {
         })
     }
 });
+
+function isGoogleAuthEnabled(req,res,next) {
+    ApplicationConfig.getAuthConfig((err,authConfig)=>{
+        if(err) throw err;
+        if(authConfig) {
+            if(authConfig.googleLoginOption.isEnabled) {
+                next();
+            } else {
+                res.status(404).send();
+            }
+        } else {
+            res.status(500).send();
+        }
+    });
+}
+
+router.get('/auth/google',isGoogleAuthEnabled,
+  passport.authenticate('google', { scope: ['https://www.googleapis.com/auth/plus.login'] }));
+
+router.get('/auth/google/redirect', 
+    passport.authenticate('google', { session: false }),
+    function(req, res) {
+        //console.log("Google Callback Returned");
+        let newUser = req.user._json;
+        if(newUser == null) {
+            res.status(404).send();
+        } else {
+            jwt.sign(newUser, APP_CONFIG.app_secret, {
+                expiresIn: authConfigs.tokenExpiryInterval
+            }, function (err, token) {
+                if (err) throw err;
+                else {
+                    newUser.authType = 'api.user';
+                    res.json({
+                        success: true,                    
+                        data: {
+                            token: 'Bearer ' + token,
+                            user: newUser
+                        },
+                        message: "User Succesfully logged in"
+                    });
+                }
+            });        
+        }        
+});
+
 
 // Adding Insert Option
 router.post('/insert/:schema/:routeName', (req, res) => {
@@ -527,8 +578,6 @@ router.post('/update/:schema/:routeName', (req, res) => {
     });
 });
 
-
-
 router.get("/profile", guardRoute, (req, res) => {
     console.log(req)
     res.json({
@@ -553,15 +602,14 @@ function guardRoute(req, res, next) {
     });
 }
 
-function loggedIn(token) {
-    console.log("TODO: Implement other validator such as custom and admin session");
+function loggedIn(token) {    
     return jwt.verify(token, APP_CONFIG.app_secret, function (err, decoded) {
         if (err) {            
             return false;
-        } else if (decoded._id) { 
+        } else if(decoded.authType = 'api.user') { 
             console.log(decoded);
             return true;
-        }
+        }        
     });
 }
 

@@ -80,7 +80,7 @@ router.post('/authenticate', (req, res) => {
                     type: 'admin'
                 }
                 jwt.sign(rUser, APP_CONFIG.app_secret, {
-                    expiresIn: '240h'
+                    expiresIn: '24h'
                 }, function (err, token) {
                     if (err) throw err;
                     else {
@@ -494,6 +494,34 @@ router.post('/addRoute',AuthGuard, (req, res) => {
     });
 });
 
+router.post('/deleteRoute',AuthGuard,(req,res)=>{
+    if(req.body) {
+        let query = {
+            name: req.body.name,
+            schemaName: req.body.schemaName
+        };
+        RouteStructure.remove(query,(err,data)=>{
+            if(err) throw err;
+            else if(data != null && data.n >0) {
+                res.json({
+                    success: true,
+                    message: "Route Deleted Successfully!!",                    
+                });
+            } else {
+                res.json({
+                    success: false,
+                    message: "Database Error: Route not deleted!!"
+                });
+            }
+        });        
+    } else {
+        res.json({
+            success: false,
+            message: "Error: Request body is empty!"
+        });
+    }    
+});
+
 router.post('/getRoutes',AuthGuard, (req, res) => {
     let schemaName = req.body.schemaName;
     query = {
@@ -535,25 +563,14 @@ router.get('/getAuthenticationConfig',(req,res)=>{
 });
 
 router.post('/setAuthenticationConfig',(req,res)=>{    
-    let config = req.body;
+    let config = req.body;    
     if(config != null) {
         let query = {            
             config: config,
             modifiedAt: new Date(),
         }
-        ApplicationConfig.update({name: 'auth'},query,(err,data)=>{
-            if(err) throw err;
-            else if(data && data.n ==1 ) {
-                res.json({
-                    success: true,
-                    message: "Configurations Saved Successfully!!"
-                });
-            } else {
-                res.json({
-                    success: false,
-                    message: "Some error occured in saving configurations!"
-                })
-            }      
+        ApplicationConfig.updateAuthConfig(query,(jsonRes)=>{
+            res.json(jsonRes);
         });
     }
 });

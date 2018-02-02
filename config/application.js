@@ -1,6 +1,7 @@
 const APP_CONFIG = {
         appName: 'Bookie',
         port: 4000,
+        hostname: 'localhost',
         app_secret: 'ApplicationSecretKey',
         database: {
             name: 'bookie_db',
