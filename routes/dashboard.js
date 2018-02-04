@@ -197,6 +197,37 @@ router.post('/auth/changePassword', AuthGuard, (req, res) => {
     }
 });
 
+router.post('/auth/updateProfile',AuthGuard,(req,res)=>{
+    let updateDoc = req.body;
+    let userID = req.user._id;    
+    if(updateDoc != null) {
+        updateDoc = {
+            displayName: req.body.displayName,
+            avatar: req.body.avatar
+        }
+        DashboardUser.findByIdAndUpdate(userID, updateDoc, {new: true}, (err,data)=>{
+            if(err) throw err;
+            else if(data != null){
+                console.log(data);
+                res.json({
+                    success: true,
+                    message: "Profile Saved Successfully!"
+                });
+            } else {
+                res.json({
+                    success: false,
+                    message: "Not Authorized User",
+                });
+            }
+        });        
+    } else {
+        res.json({
+            success: false,
+            message: "Error: Request Body Empty!!"
+        })
+    }
+});
+
 router.get('/profile', AuthGuard, (req, res) => {
     //console.log(req.rawHeaders);
     res.json({
@@ -475,35 +506,7 @@ router.post('/insertData', AuthGuard, (req, res) => {
                 }
             });
         }
-    });
-    // ApplicationsSchemaStructure.validateBeforeInSchema(query,schemaName,(err,returnBack)=>{
-    //     if(err) throw err;
-    //     else {
-    //         if(returnBack.success) {
-    //             let Schema;
-    //             try {
-    //                 Schema = mongoose.model(schemaName);
-    //             } catch(err) {                
-    //                 Schema = ApplicationsSchemaStructure.getSchemaModel(schemaName,{any:{}});
-    //             }    
-    //             delete query._id;
-    //             query._insertAt = new Date().toDateString();
-    //             query._updated = new Date().toDateString();
-    //             let doc = new Schema(query);
-    //             doc.save(err=>{
-    //                 if(err) throw err;
-    //                 else {
-    //                     res.json({
-    //                         success: true,
-    //                         message: "Data Inserted Successfully!!"
-    //                     });
-    //                 }
-    //             })
-    //         } else {
-    //             res.json(returnBack);
-    //         }
-    //     }
-    // });         
+    });           
 });
 
 router.post('/deleteData', AuthGuard, (req, res) => {
