@@ -13,6 +13,10 @@ const RouteSchema = mongoose.Schema({
         type: String,
         required: true,        
     },
+    requestByJSON: {
+        type: Boolean,
+        required: true
+    },
     requestBody: {
         type: [],    
     },    
@@ -26,6 +30,10 @@ const RouteSchema = mongoose.Schema({
     createdAt: {
         type: Date,
         default: new Date()
+    },
+    requestMethod: {
+        type: String,        
+        default: 'POST',
     }
 });
 

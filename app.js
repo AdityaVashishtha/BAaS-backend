@@ -12,7 +12,7 @@ const apiRoute = require('./routes/main_api');
 const dashboardRoute = require('./routes/dashboard');
 const APP_CONFIG = require('./config/application');
 const User = require('./models/user');
-
+const logger = require('./utility/logger');
 
 //Variable Declaration
 const app = express();
@@ -24,10 +24,10 @@ const dbUri = 'mongodb://'+APP_CONFIG.database.hostname+':'+
 mongoose.connect(dbUri);
 let db = mongoose.connection;
 db.on('error',(err)=>{
-    console.log(err);
+    logger.ERROR(err);
 });
 db.once('open',()=>{
-    console.log('MongoDB Connected to :: '+dbUri);
+    logger.LOG('MongoDB Connected to :: '+dbUri);
 });
 
 //Middleware setup
@@ -41,8 +41,6 @@ app.use(passport.session());
 
 require('./config/passport')(passport);
 
-
-
 //Application Routing and middleware setup
 app.use('/api',apiRoute);
 app.use('/dashboard',dashboardRoute);
@@ -52,12 +50,11 @@ app.get('/',(req,res)=>{
     res.sendStatus(403);
 });
 
-
 //App Listening on port
 app.listen(port,(err)=>{
     if(err)
-        console.log(err);
-    else {
-        console.log('Server Started on port: '+port);
+        logger.ERROR(err);
+    else {        
+        logger.LOG("Application Started on port " + port);
     }
 });

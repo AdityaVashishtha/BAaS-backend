@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 //Require Models to use
+const logger = require('../utility/logger');
 const DashboardUser = require('../config/models/dashboard-user');
 const APP_CONFIG = require('../config/application');
 const AuthGuard = require('../config/passport').isAuthenticated(passport);
@@ -21,10 +22,23 @@ USER_TABLE_NAME = 'authuser';
 
 
 router.get('/', (req, res) => {
+    logger.log("Loggin Info", {
+        timestamp: new Date().toString()
+    });
     res.send('Dashboard');
 });
 
 router.use('/api', apiHitPoint);
+
+router.get('/logs', (req, res) => {
+    let logs = logger.getFreshLOG();
+    console.log(logs);
+    res.json({
+        success: true,
+        logs: logs,
+        count: logs.lengt
+    });
+});
 
 router.post('/register', (req, res) => {
     let user = req.body.user;
@@ -32,6 +46,11 @@ router.post('/register', (req, res) => {
     let hash = bcrypt.hashSync(user.password, salt);
     user.password = hash;
     user.createdAt = new Date();
+    user.lastSignedIn = new Date();
+    user.avatar = 0;
+    if (!user.type)
+        user.type = 'admin'
+
     let newUser = new DashboardUser(user);
     DashboardUser.findUserByUsername(user.username, (err, user) => {
         if (err)
@@ -74,23 +93,42 @@ router.post('/authenticate', (req, res) => {
                 isMatch = (rUser.password, user.password);
             }
             if (isMatch) {
-                rUser = {
-                    username: user.username,
-                    fullname: user.fullname,
-                    type: 'admin'
-                }
+                // rUser = {
+                //     username: user.username,
+                //     fullname: user.fullname,
+                //     type: 'admin'
+                // }                
+                delete user.password
+                rUser = user._doc;
                 jwt.sign(rUser, APP_CONFIG.app_secret, {
                     expiresIn: '24h'
                 }, function (err, token) {
                     if (err) throw err;
                     else {
-                        res.json({
-                            success: true,
-                            data: {
-                                token: 'Bearer ' + token,
-                                user: user
-                            },
-                            message: "User Succesfully logged in"
+                        let upDoc = {
+                            lastSignedIn: new Date()
+                        }
+                        DashboardUser.findByIdAndUpdate(rUser._id, upDoc, {
+                            new: true
+                        }, (err, data) => {
+                            if (err) throw err;
+                            else if (data != null) {
+                                console.log(data);
+                                console.log("user is logging in..");
+                                res.json({
+                                    success: true,
+                                    data: {
+                                        token: 'Bearer ' + token,
+                                        user: user
+                                    },
+                                    message: "User Succesfully logged in"
+                                });
+                            } else {
+                                res.json({
+                                    success: false,
+                                    message: 'Some Error in DB.'
+                                });
+                            }
                         });
                     }
                 });
@@ -107,6 +145,56 @@ router.post('/authenticate', (req, res) => {
             });
         }
     });
+});
+
+router.post('/auth/changePassword', AuthGuard, (req, res) => {
+    let userReq = req.body;    
+    let username = req.user.username;
+    if (username != null && userReq) {
+        DashboardUser.findOne({
+            username: username
+        }, (err, data) => {
+            if (err) throw err;
+            else if (data != null) {
+                let userId = data._doc._id;
+                let salt = bcrypt.genSaltSync(10);            
+                let newHash = bcrypt.hashSync(userReq.newPassword, salt);                
+                let isMatch = bcrypt.compareSync(userReq.oldPassword, data._doc.password);
+                if(isMatch) {
+                    let upDoc = { password: newHash };
+                    DashboardUser.findByIdAndUpdate(userId, upDoc, (err, data) => {
+                        if (err) throw err;
+                        else if (data != null) {
+                            res.json({
+                                success: true,
+                                message: "Password Change",
+                            });
+                        } else {
+                            res.json({
+                                success: false,
+                                message: "Not a valid user",
+                            });
+                        }
+                    });
+                } else {
+                    res.json({
+                        success: false,
+                        message: "Not a valid user",
+                    });
+                }                
+            } else {
+                res.json({
+                    success: false,
+                    message: "Not a valid user",
+                });
+            }
+        });
+    } else {
+        res.json({
+            success: false,
+            message: "Not Authorized",
+        });
+    }
 });
 
 router.get('/profile', AuthGuard, (req, res) => {
@@ -163,39 +251,42 @@ router.post('/createSchema', AuthGuard, (req, res) => {
     });
 });
 
-router.post('/deleteSchema',AuthGuard,(req,res)=>{
+router.post('/deleteSchema', AuthGuard, (req, res) => {
     let schema = req.body;
-    if(schema.name) {
-        if(schema.name == USER_TABLE_NAME) {
+    if (schema.name) {
+        if (schema.name == USER_TABLE_NAME) {
             res.json({
                 success: false,
-                message: "Can not delete user('"+USER_TABLE_NAME+"') table",
+                message: "Can not delete user('" + USER_TABLE_NAME + "') table",
             });
-        }
-        else if(schema.mode && schema.mode == 'archive') {
+        } else if (schema.mode && schema.mode == 'archive') {
             res.json({
                 success: false,
                 message: "Archive Functionality need to be added"
             });
-        } else {   
-            console.log("Started deleting schema : '"+schema.name+"' ...");
-            RouteStructure.remove({ schemaName: schema.name},(err,data)=>{
-                if(err) throw err;
-                else if(data) {
+        } else {
+            console.log("Started deleting schema : '" + schema.name + "' ...");
+            RouteStructure.remove({
+                schemaName: schema.name
+            }, (err, data) => {
+                if (err) throw err;
+                else if (data) {
                     console.log(data);
-                    ApplicationsSchemaStructure.remove({name: schema.name},(err,data)=>{
-                        if(err) throw err;
-                        else if(data) {
-                            console.log(data);                            
+                    ApplicationsSchemaStructure.remove({
+                        name: schema.name
+                    }, (err, data) => {
+                        if (err) throw err;
+                        else if (data) {
+                            console.log(data);
                             let ModalSchema;
                             try {
                                 ModalSchema = mongoose.model(schema.name);
                             } catch (err) {
-                                ModalSchema = ApplicationsSchemaStructure.getSchemaModel(schema.name,{});                                
+                                ModalSchema = ApplicationsSchemaStructure.getSchemaModel(schema.name, {});
                             }
-                            ModalSchema.collection.drop({},(err,data)=>{
-                                if(err) throw err;
-                                else if(data) {
+                            ModalSchema.collection.drop({}, (err, data) => {
+                                if (err) throw err;
+                                else if (data) {
                                     console.log(data);
                                     res.json({
                                         success: true,
@@ -204,11 +295,11 @@ router.post('/deleteSchema',AuthGuard,(req,res)=>{
                                 }
                             });
                         }
-                    })                    
+                    })
                 }
-            });        
-            console.log("Finished deleting schema : '"+schema.name+"' ...");   
-        }        
+            });
+            console.log("Finished deleting schema : '" + schema.name + "' ...");
+        }
     } else {
         res.json({
             success: false,
@@ -415,20 +506,20 @@ router.post('/insertData', AuthGuard, (req, res) => {
     // });         
 });
 
-router.post('/deleteData',AuthGuard,(req,res)=>{
-    if(req.body) {
+router.post('/deleteData', AuthGuard, (req, res) => {
+    if (req.body) {
         let query = req.body.data;
         let schemaName = req.body.schema;
-        if(query && schemaName) {
+        if (query && schemaName) {
             let ModalSchema;
             try {
                 ModalSchema = mongoose.model(schemaName);
             } catch (err) {
-                ModalSchema = ApplicationsSchemaStructure.getSchemaModel(schemaName,{});
+                ModalSchema = ApplicationsSchemaStructure.getSchemaModel(schemaName, {});
             }
-            ModalSchema.remove(query,(err,data)=>{
-                if(err) throw err;
-                else if(data!=null && data.n > 0 ) {
+            ModalSchema.remove(query, (err, data) => {
+                if (err) throw err;
+                else if (data != null && data.n > 0) {
                     res.json({
                         success: true,
                         message: "Data Deleted Successfully",
@@ -453,19 +544,34 @@ router.post('/deleteData',AuthGuard,(req,res)=>{
             success: false,
             message: "Error: Request body is empty!"
         });
-    }    
+    }
 });
 
-router.post('/addRoute',AuthGuard, (req, res) => {
+router.post('/addRoute', AuthGuard, (req, res) => {
     let routeModel = req.body;
-    let routeData = {
-        name: routeModel.name,
-        schemaName: routeModel.schemaName,
-        operationType: routeModel.operationType,
-        requestBody: routeModel.requestBody,
-        constraints: routeModel.constraint,
-        accessControl: routeModel.accessControl,
-        createdAt: new Date(),
+    let routeData;
+    if (routeModel.operationType == 'findById') {
+        routeData = {
+            name: routeModel.name,
+            schemaName: routeModel.schemaName,
+            operationType: routeModel.operationType,
+            requestByJSON: false,
+            accessControl: routeModel.accessControl,
+            createdAt: new Date(),
+            requestMethod: 'GET'
+        }
+    } else {
+        routeData = {
+            name: routeModel.name,
+            schemaName: routeModel.schemaName,
+            operationType: routeModel.operationType,
+            requestByJSON: true,
+            requestBody: routeModel.requestBody,
+            constraints: routeModel.constraint,
+            accessControl: routeModel.accessControl,
+            createdAt: new Date(),
+            requestMethod: 'POST'
+        }
     }
     let route = new RouteStructure(routeData);
     //console.log(route);
@@ -494,18 +600,18 @@ router.post('/addRoute',AuthGuard, (req, res) => {
     });
 });
 
-router.post('/deleteRoute',AuthGuard,(req,res)=>{
-    if(req.body) {
+router.post('/deleteRoute', AuthGuard, (req, res) => {
+    if (req.body) {
         let query = {
             name: req.body.name,
             schemaName: req.body.schemaName
         };
-        RouteStructure.remove(query,(err,data)=>{
-            if(err) throw err;
-            else if(data != null && data.n >0) {
+        RouteStructure.remove(query, (err, data) => {
+            if (err) throw err;
+            else if (data != null && data.n > 0) {
                 res.json({
                     success: true,
-                    message: "Route Deleted Successfully!!",                    
+                    message: "Route Deleted Successfully!!",
                 });
             } else {
                 res.json({
@@ -513,16 +619,16 @@ router.post('/deleteRoute',AuthGuard,(req,res)=>{
                     message: "Database Error: Route not deleted!!"
                 });
             }
-        });        
+        });
     } else {
         res.json({
             success: false,
             message: "Error: Request body is empty!"
         });
-    }    
+    }
 });
 
-router.post('/getRoutes',AuthGuard, (req, res) => {
+router.post('/getRoutes', AuthGuard, (req, res) => {
     let schemaName = req.body.schemaName;
     query = {
         schemaName: schemaName
@@ -544,10 +650,12 @@ router.post('/getRoutes',AuthGuard, (req, res) => {
     })
 });
 
-router.get('/getAuthenticationConfig',(req,res)=>{
-    ApplicationConfig.findOne({name: 'auth'},(err,config)=>{
-        if(err) throw err;
-        else if(config != null) {
+router.get('/getAuthenticationConfig', (req, res) => {
+    ApplicationConfig.findOne({
+        name: 'auth'
+    }, (err, config) => {
+        if (err) throw err;
+        else if (config != null) {
             res.json({
                 success: true,
                 message: "Config loaded successfully!!",
@@ -562,24 +670,31 @@ router.get('/getAuthenticationConfig',(req,res)=>{
     });
 });
 
-router.post('/setAuthenticationConfig',(req,res)=>{    
-    let config = req.body;    
-    if(config != null) {
-        let query = {            
+router.post('/setAuthenticationConfig', (req, res) => {
+    let config = req.body;
+    if (config != null) {
+        let query = {
             config: config,
             modifiedAt: new Date(),
         }
-        ApplicationConfig.updateAuthConfig(query,(jsonRes)=>{
+        ApplicationConfig.updateAuthConfig(query, (jsonRes) => {
             res.json(jsonRes);
         });
     }
 });
 
-router.get('/getApplicationDetails',AuthGuard,(req,res)=>{
+router.get('/getApplicationDetails', AuthGuard, (req, res) => {
     res.json({
         success: true,
         message: "Application Details Fetched",
         config: APP_CONFIG
+    });
+});
+
+router.get('/getUserProfile', AuthGuard, (req, res) => {
+    console.log(req.user);
+    res.json({
+        test: true
     });
 });
 

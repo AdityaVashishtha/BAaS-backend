@@ -10,17 +10,25 @@ const DashboardUserSchema = mongoose.Schema({
         type: String,        
         required: true
     },
-    fullname:{
+    displayName:{
         type: String,        
         required: true
+    },
+    avatar: {
+        type: Number,
+        default: 0,
+        required: true,
     },
     createdAt:{
         type: Date,        
         required: true
     },
-    access: {
-        type: String,
-        enum: ['A','B']
+    lastSignedIn: {
+        type: Date,
+        required: true,
+    },
+    type: {
+        type: String        
     }    
 });
 

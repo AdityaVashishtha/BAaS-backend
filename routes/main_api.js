@@ -25,20 +25,24 @@ var authConfigs = {
 }
 
 router.get('/', (req, res) => {
-    let schema;
-    try {
-        schema = mongoose.model(tableName);
-    } catch (err) {
-        schema = ApplicationsSchemaStructure.getSchemaModel(tableName, {});
-    }
-    schema.find({}, (err, data) => {
-        if (err) throw err;
-        else {
-            console.log(data);
-        }
-    });
+    // let schema;
+    // try {
+    //     schema = mongoose.model(tableName);
+    // } catch (err) {
+    //     schema = ApplicationsSchemaStructure.getSchemaModel(tableName, {});
+    // }
+    // schema.find({}, (err, data) => {
+    //     if (err) throw err;
+    //     else {
+    //         console.log(data);
+    //         console.log("Something");
+    //     }
+    // });    
+    let upTime = parseInt(process.uptime()/3600)+':'+parseInt(process.uptime()/60)+':'+parseInt(process.uptime()%60);    
     res.json({
-        success: true
+        success: true,
+        message: 'Server is Running',
+        uptime: upTime
     });
 });
 
@@ -52,48 +56,57 @@ router.post('/register', (req, res) => {
         newUser.password = hash;
         newUser.createdAt = new Date().toString();
         newUser.signedIn = new Date().toString();
-        newUser.provider = 'email';
+        newUser.provider = 'email/username';
         newUser.identifier = user.username;
-        if (validator.isEmail(newUser.identifier)) {
-            let Schema;
-            try {
-                Schema = mongoose.model(tableName);
-            } catch (err) {
-                Schema = ApplicationsSchemaStructure.getSchemaModel(tableName, {});
+        let authConfig = ApplicationConfig.getAuthConfig((err,config)=>{   
+            let validateUserField = false;
+            if(config.primaryLogin == "email")
+                validateUserField = validator.isEmail(newUser.identifier);
+            else 
+                validateUserField = validator.isAlphanumeric(newUser.identifier);
+            
+            if (validateUserField) {
+                let Schema;
+                try {
+                    Schema = mongoose.model(tableName);
+                } catch (err) {
+                    Schema = ApplicationsSchemaStructure.getSchemaModel(tableName, {});
+                }
+                query = {
+                    identifier: newUser.identifier
+                };
+                let newUserRow = Schema(newUser);
+                Schema.findOne(query, (err, data) => {
+                    if (err) throw err;
+                    else if (data) {
+                        //console.log(data);
+                        res.json({
+                            success: false,
+                            message: "Email/Username already in use."
+                        });
+                    } else {
+                        newUserRow.save(err => {
+                            if (err) throw err;
+                            else {
+                                res.json({
+                                    success: true,
+                                    message: "User registered succesfully"
+                                });
+                            }
+                        });
+                    }
+                });
+            } else {
+                res.json({
+                    success: false,
+                    exception: {
+                        exceptionType: "NotValidEmail",
+                        exceptionMessage: "Provide string was not a valid Username/Email",
+                    }
+                });
             }
-            query = {
-                identifier: newUser.identifier
-            };
-            let newUserRow = Schema(newUser);
-            Schema.findOne(query, (err, data) => {
-                if (err) throw err;
-                else if (data) {
-                    //console.log(data);
-                    res.json({
-                        success: false,
-                        message: "Email Id already in use."
-                    });
-                } else {
-                    newUserRow.save(err => {
-                        if (err) throw err;
-                        else {
-                            res.json({
-                                success: true,
-                                message: "User with email id registered succesfully"
-                            });
-                        }
-                    });
-                }
-            });
-        } else {
-            res.json({
-                success: false,
-                exception: {
-                    exceptionType: "NotValidEmail",
-                    exceptionMessage: "Provide string was not a valid emal",
-                }
-            });
-        }
+        });
+        
     } else {
         res.json({
             success: false,
@@ -210,6 +223,71 @@ router.get('/auth/google/redirect',
         }        
 });
 
+router.post('/auth/changePassword',(req,res)=>{
+    let profile = req.body;
+    console.log(profile);
+    if(profile && profile != null) {
+        let oldPassword = profile.oldPassword;
+        let newPassword = profile.newPassword;
+        let username = profile.username;
+        if(oldPassword && newPassword && oldPassword) {
+            let salt = bcrypt.genSaltSync(10);            
+            let newHash = bcrypt.hashSync(newPassword, salt);            
+            let Schema;
+            try {
+                Schema = mongoose.model(authConfigs.authTable);
+            } catch (err) {
+                Schema = ApplicationsSchemaStructure.getSchemaModel(authConfigs.authTable, {});
+            }
+            query = {
+                identifier: username                
+            }
+            Schema.findOne(query,(err,data)=>{                
+                if(err) throw err;
+                else if(data != null) {
+                    data = data._doc;                    
+                    let isMatch = bcrypt.compareSync(oldPassword, data.password);
+                    if(isMatch) {
+                        Schema.update(query,{password: newHash},(err,data)=>{
+                            if(err) throw err;
+                            else if(data != null) {
+                                res.json({
+                                    success: true,
+                                    message: `Password for ${username} changed Successfully!`
+                                });
+                            } else {                                
+                                res.json({
+                                    success: false,
+                                    message: `Some Error in changing password`
+                                });
+                            }
+                        });                        
+                    } else {
+                        res.json({
+                            success: false,
+                            message: `Username or Password does not match`
+                        });
+                    }                    
+                } else {
+                    res.json({
+                        success: false,
+                        message: `Username or Password does not match`
+                    });
+                }
+            });
+        } else {
+            res.json({
+                success: false,
+                message: "Request Body is incomplete!!"
+            });
+        }        
+    } else {
+        res.json({
+            success: false,
+            message: "Request Body is empty!!"
+        });
+    }
+});
 
 // Adding Insert Option
 router.post('/insert/:schema/:routeName', (req, res) => {
@@ -411,7 +489,9 @@ router.post('/delete/:schema/:routeName', (req, res) => {
         else if(data) {
             if(data.accessControl == 'public') {
                 isLoggedIn = true;
-            } 
+            } else if(data.accessControl == 'admin') {
+                isLoggedIn = require('../config/passport').isLoggedIn(token);
+            }
             if(isLoggedIn) {
                 let Schema, query;
                 try {
@@ -499,7 +579,9 @@ router.post('/update/:schema/:routeName', (req, res) => {
         else if(data) {
             if(data.accessControl == 'public') {
                 isLoggedIn = true;
-            } 
+            } else if(data.accessControl == 'admin') {
+                isLoggedIn = require('../config/passport').isLoggedIn(token);
+            }
             if(isLoggedIn) {
                 let Schema, query;
                 try {
@@ -577,6 +659,60 @@ router.post('/update/:schema/:routeName', (req, res) => {
         }
     });
 });
+
+
+router.get('/findById/:routeName/:schemaName/:id',(req,res)=>{
+    let idForSchema = req.params.id;
+    let schemaName = req.params.schemaName;
+    let token='',isLoggedIn=false;
+    if(req.headers.authorization)
+        token = req.headers.authorization.split(' ')[1];
+    isLoggedIn = loggedIn(token);
+    let query = {
+        name: req.params.routeName,
+        schemaName: schemaName,
+    };
+    RouteStructure.findOne(query, (err, data) => {
+        if (err) throw err;
+        else if(data) {
+            if(data.accessControl == 'public') {
+                isLoggedIn = true;
+            } else if(data.accessControl == 'admin') {
+                isLoggedIn = require('../config/passport').isLoggedIn(token);
+            }
+            if(isLoggedIn && idForSchema) {
+                let Schema, query;
+                try {
+                    Schema = mongoose.model(data.schemaName);
+                } catch (err) {
+                    Schema = ApplicationsSchemaStructure.getSchemaModel(data.schemaName, {});
+                }     
+                idForSchema = validator.isHexadecimal(idForSchema) && idForSchema.length == 24 ? idForSchema : null;
+                //console.log(idForSchema);
+                Schema.findById(idForSchema,(err, data) => {
+                    if (err) throw err;                
+                    if(data) {
+                        res.json({
+                            success: true,
+                            count: data.length,
+                            data: data,                        
+                        });
+                    } else {
+                        res.json({
+                            success: false,
+                            message: "Some Error in retrieval",
+                        })
+                    }
+                });
+            } else {
+                res.status(401).send();
+            }                        
+        } else {
+            res.status(404).send();
+        }
+    });
+});
+
 
 router.get("/profile", guardRoute, (req, res) => {
     console.log(req)
