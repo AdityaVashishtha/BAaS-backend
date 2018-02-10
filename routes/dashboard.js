@@ -42,7 +42,8 @@ router.get('/logs', (req, res) => {
 
 router.post('/register', (req, res) => {
     let user = req.body.user;
-    let salt = bcrypt.genSaltSync(10);
+    if(user && user.displayName && user.password && user.username) {
+        let salt = bcrypt.genSaltSync(10);
     let hash = bcrypt.hashSync(user.password, salt);
     user.password = hash;
     user.createdAt = new Date();
@@ -76,6 +77,12 @@ router.post('/register', (req, res) => {
         }
     });
     //res.send(req.body.user);
+    } else {
+        res.json({
+            success: false,
+            message: "Request Body should contain user object with field username, password, displayName"
+        });
+    }
 });
 
 
@@ -393,6 +400,8 @@ router.get('/table/:tableName', AuthGuard, (req, res) => {
 });
 
 router.get('/getSchemaDetail/:tableName', AuthGuard, (req, res) => {
+    logger.LOG("Get Schema Started on port ");
+
     let tableName = req.params.tableName;
     var query = ApplicationsSchemaStructure.findOne({
         name: tableName
