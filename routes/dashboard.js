@@ -710,6 +710,14 @@ router.get('/getUserProfile', AuthGuard, (req, res) => {
     });
 });
 
+router.post('/createModel',AuthGuard,(req,res)=>{
+    console.log(req.body);
+    res.json({
+        success: true,
+        message: "This is greate"
+    });
+});
+
 function isAuthenticated() {
     return passport.authenticate('jwt', {
         session: false

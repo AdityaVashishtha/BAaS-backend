@@ -291,6 +291,7 @@ router.post('/auth/changePassword',(req,res)=>{
 
 // Adding Insert Option
 router.post('/insert/:schema/:routeName', (req, res) => {
+    console.log(req.body);
     let token='',isLoggedIn=false;
     if(req.headers.authorization)
         token = req.headers.authorization.split(' ')[1];
@@ -426,7 +427,7 @@ router.post('/find/:schema/:routeName', (req, res) => {
                             query = query.where(s_attr).gte(req.body[r_attr]);
                         } else if (item.constraint.toString() === 'less-than') {
                             console.log("Lesser Modifier")
-                            query = query.where(s_attr).gte(req.body[r_attr].toString())
+                            query = query.where(s_attr).lte(req.body[r_attr].toString())
                         } else if (item.constraint.toString() === 'regex') {
                             console.log("Regex Modifier");
                             try {
@@ -517,7 +518,7 @@ router.post('/delete/:schema/:routeName', (req, res) => {
                             query = query.where(s_attr).gte(req.body[r_attr]);
                         } else if (item.constraint.toString() === 'less-than') {
                             console.log("Lesser Modifier")
-                            query = query.where(s_attr).gte(req.body[r_attr].toString())
+                            query = query.where(s_attr).lte(req.body[r_attr].toString())
                         } else if (item.constraint.toString() === 'regex') {
                             console.log("Regex Modifier");
                             try {
