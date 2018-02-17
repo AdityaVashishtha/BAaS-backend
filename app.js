@@ -13,7 +13,7 @@ const dashboardRoute = require('./routes/dashboard');
 const APP_CONFIG = require('./config/application');
 const User = require('./models/user');
 const logger = require('./utility/logger');
-
+const initializer = require('./utility/initializer');
 //Variable Declaration
 const app = express();
 const port = APP_CONFIG.port;
@@ -29,6 +29,10 @@ db.on('error',(err)=>{
 db.once('open',()=>{
     logger.LOG('MongoDB Connected to :: '+dbUri);
 });
+
+//checking if initialized or not
+if(APP_CONFIG.needInitialization)
+    initializer();
 
 //Middleware setup
 app.use(cors());

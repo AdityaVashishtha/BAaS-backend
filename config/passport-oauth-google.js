@@ -15,8 +15,9 @@ module.exports = function (passport) {
         if (authConfig) {
             let googleOptions = authConfig.googleLoginOption;
             const GOOGLE_CLIENT_ID = googleOptions.clientID.trim();
-            const GOOGLE_CLIENT_SECRET = googleOptions.clientSecrete.trim();
-            passport.use(new GoogleStrategy({
+            const GOOGLE_CLIENT_SECRET = googleOptions.clientSecrete.trim();       
+            if(googleOptions.isEnabled) {
+                passport.use(new GoogleStrategy({
                     clientID: GOOGLE_CLIENT_ID,
                     clientSecret: GOOGLE_CLIENT_SECRET,
                     callbackURL: "http://localhost:4000/api/auth/google/redirect"
@@ -74,6 +75,9 @@ module.exports = function (passport) {
                     }
                 }
             ));
+            } else {
+                console.log("Google Login is disabled");
+            }
         }
     });
 }
