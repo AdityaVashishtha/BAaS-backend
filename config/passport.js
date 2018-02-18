@@ -11,7 +11,7 @@ module.exports = function(passport) {
     opts.secretOrKey = APP_CONFIG.app_secret;    
     passport.use(new JwtStrategy(opts, (jwt_payload,done)=>{            
         //console.log(jwt_payload);
-        console.log("Authorizing User ...");
+        //console.log("Authorizing User ...");
         DashboardUser.findUserByUsername(jwt_payload.username,(err,user)=>{
             if(err) 
                 done(err,false);
