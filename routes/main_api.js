@@ -11,6 +11,7 @@ const RouteStructure = require('../config/models/route-structure');
 const ApplicationConfig = require('../config/models/application-config');
 
 require('../config/passport-oauth-google')(passport);
+require('../config/passport-facebook')(passport);
 
 const APP_CONFIG = require('../config/application');
 var tableName = 'authUser';
@@ -64,7 +65,7 @@ router.post('/register', (req, res) => {
                 validateUserField = validator.isEmail(newUser.identifier);
             else 
                 validateUserField = validator.isAlphanumeric(newUser.identifier);
-            
+            console.log(config);
             if (validateUserField) {
                 let Schema;
                 try {
@@ -193,6 +194,22 @@ function isGoogleAuthEnabled(req,res,next) {
     });
 }
 
+function isFacebookAuthEnabled(req,res,next) {
+    ApplicationConfig.getAuthConfig((err,authConfig)=>{
+        if(err) throw err;
+        if(authConfig) {
+            if(authConfig.facebookLoginOption.isEnabled) {
+                next();
+            } else {
+                res.status(404).send();
+            }
+        } else {
+            res.status(500).send();
+        }
+    });
+}
+
+
 router.get('/auth/google',isGoogleAuthEnabled,
   passport.authenticate('google', { scope: ['https://www.googleapis.com/auth/plus.login'] }));
 
@@ -222,6 +239,37 @@ router.get('/auth/google/redirect',
             });        
         }        
 });
+
+router.get('/auth/facebook',isFacebookAuthEnabled,
+  passport.authenticate('facebook', { scope: ['https://www.googleapis.com/auth/plus.login'] }));
+
+router.get('/auth/facebook/redirect', 
+    passport.authenticate('facebook', { session: false }),
+    function(req, res) {
+        //console.log("Google Callback Returned");
+        let newUser = req.user._json;
+        if(newUser == null) {
+            res.status(404).send();
+        } else {
+            jwt.sign(newUser, APP_CONFIG.app_secret, {
+                expiresIn: authConfigs.tokenExpiryInterval
+            }, function (err, token) {
+                if (err) throw err;
+                else {
+                    newUser.authType = 'api.user';
+                    res.json({
+                        success: true,                    
+                        data: {
+                            token: 'Bearer ' + token,
+                            user: newUser
+                        },
+                        message: "User Succesfully logged in"
+                    });
+                }
+            });        
+        }        
+});
+
 
 router.post('/auth/changePassword',(req,res)=>{
     let profile = req.body;
