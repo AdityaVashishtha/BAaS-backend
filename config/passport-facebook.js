@@ -14,70 +14,71 @@ module.exports = function (passport) {
         if (err) throw err;
         if (authConfig) {
             let facebookOptions = authConfig.facebookLoginOption;
-            const FACEBOOK_CLIENT_ID = facebookOptions.clientID.trim();
-            const FACEBOOK_CLIENT_SECRET = facebookOptions.clientSecrete.trim();     
-            console.log(facebookOptions);  
-            if(facebookOptions.isEnabled) {
+            const FACEBOOK_APP_ID = facebookOptions.clientID.trim();
+            const FACEBOOK_APP_SECRET = facebookOptions.clientSecrete.trim();
+            //console.log(facebookOptions);
+            if (facebookOptions.isEnabled) {
+                console.log("Facebook Login Enabled");
                 passport.use(new FacebookStrategy({
-                    clientID: FACEBOOK_CLIENT_ID,
-                    clientSecret: FACEBOOK_CLIENT_SECRET,
-                    callbackURL: "http://localhost:4000/api/auth/facebook/redirect"
-                },
-                function (accessToken, refreshToken, profile, done) {
-                    console.log("Facebook Profile Recieved !! ...");
-                    if (profile) {
-                        console.log(profile);
-                        let UserSchema;
-                        let tableName = 'authuser';
-                        try {
-                            UserSchema = mongoose.model(tableName);
-                        } catch (err) {
-                            UserSchema = ApplicationsSchemaStructure.getSchemaModel(tableName, {});
-                        }
-                        query = {
-                            identifier: profile.id,
-                            provider: 'google',
-                        };
-                        UserSchema.findOne(query, (err, user) => {
-                            if (err) {
-                                done(err, null);
-                            } else if (!facebookOptions.isEnabled) {
-                                done(null, null);
-                            } else if (user != null) {
-                                //Send user                                    
-                                UserSchema.update(query, {
-                                    signedIn: new Date().toString()
-                                }, (err, data) => {
-                                    if (err) done(err, null);
-                                    else if (data.n > 0) {
-                                        done(null, profile);
-                                    } else {
-                                        done(null, null);
-                                    }
-                                });
-                            } else {
-                                query.createdAt = new Date().toString();
-                                query.signedIn = new Date().toString();
-                                query.password = 'NA';
-                                let googleUser = new UserSchema(query);
-                                let tempUser = googleUser;
-                                googleUser.save((err) => {
-                                    if (err) {
-                                        done(err, null);
-                                    } else {
-                                        done(null, profile);
-                                    }
-                                });
+                        clientID: FACEBOOK_APP_ID,
+                        clientSecret: FACEBOOK_APP_SECRET,
+                        callbackURL: "http://localhost:4000/api/auth/facebook/redirect"
+                    },
+                    function (accessToken, refreshToken, profile, done) {
+                        console.log("Facebook Profile Recieved !! ...");
+                        if (profile) {
+                            //console.log(profile);
+                            let UserSchema;
+                            let tableName = 'authuser';
+                            try {
+                                UserSchema = mongoose.model(tableName);
+                            } catch (err) {
+                                UserSchema = ApplicationsSchemaStructure.getSchemaModel(tableName, {});
                             }
-                        });
-                        //done(null,profile);
-                    } else {
-                        done(null, null);
+                            query = {
+                                identifier: profile.id,
+                                provider: 'facebook',
+                            };
+                            UserSchema.findOne(query, (err, user) => {
+                                if (err) {
+                                    done(err, null);
+                                } else if (!facebookOptions.isEnabled) {
+                                    done(null, null);
+                                } else if (user != null) {
+                                    //Send user                                    
+                                    UserSchema.update(query, {
+                                        signedIn: new Date().toString()
+                                    }, (err, data) => {
+                                        if (err) done(err, null);
+                                        else if (data.n > 0) {
+                                            done(null, profile);
+                                        } else {
+                                            done(null, null);
+                                        }
+                                    });
+                                } else {
+                                    query.createdAt = new Date().toString();
+                                    query.signedIn = new Date().toString();
+                                    query.password = 'NA';
+                                    let googleUser = new UserSchema(query);
+                                    let tempUser = googleUser;
+                                    googleUser.save((err) => {
+                                        if (err) {
+                                            done(err, null);
+                                        } else {
+                                            done(null, profile);
+                                        }
+                                    });
+                                }
+                            });
+                            //done(null,profile);
+                        } else {
+                            done(null, null);
+                        }
                     }
-                }
-            ));
+                ));
             } else {
-                console.log("Google Login is disabled");
+                console.log("Facebook Login is disabled");
             }
         }
     });

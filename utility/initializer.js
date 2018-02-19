@@ -88,14 +88,6 @@ module.exports = function initialize() {
                                 "isUnique": false,
                                 "default": "",
                                 "encryptInHash": false
-                            },
-                            "test": {
-                                "name": "test",
-                                "type": "string",
-                                "isRequired": false,
-                                "isUnique": false,
-                                "default": "",
-                                "encryptInHash": false
                             }
                         }
                     });    
