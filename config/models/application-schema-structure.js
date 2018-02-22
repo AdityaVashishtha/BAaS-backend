@@ -87,12 +87,13 @@ function schemaMatch(row, structure, schemaName, callback) {
     }
     //Matching required Constraint
     console.log('Matching Required Constraint');
-    for (i = 0; i < bodyKeysLength; i++) {
-        if (structure[bodyKeys[i]].isRequired || structure[bodyKeys[i]].isRequired) {
-            if (row[bodyKeys[i]] == null || row[bodyKeys[i]].toString().length <= 0) {
+    for (i = 0; i < structureKeysLength; i++) {
+        let index_key = structureKeys[i];
+        if (structure[index_key].isRequired || structure[index_key].isUnique) {
+            if ((typeof row[index_key] == 'undefined') || row[index_key] == null || row[index_key].toString().length <= 0) {
                 callback({
                     error: true,
-                    message: "Error: Attribute '" + bodyKeys[i] + "' is required in schema but not provided!",
+                    message: "Error: Attribute '" + index_key + "' is required in schema but not provided!",
                 });
                 return;
             }
@@ -101,53 +102,59 @@ function schemaMatch(row, structure, schemaName, callback) {
     //Matching Unique key constraint
     console.log('Matching Unique Attribute Property ...' + bodyKeysLength);
     waterfall(
-        structureKeys.map((item) => {
-            return function (res,done) {
-                console.log("Outside unique");                
-                if (structure[item].isUnique) {
-                    console.log("Something to check unique");
+        bodyKeys.map((item) => {
+            return function (res, done) {
+                console.log("Outside unique");
+                if(done && res != null)
+                    done(null,res);
+                else if (structure[item].isUnique) {
+                    console.log("Check unique " + item);
                     let attrName = item;
                     let query = {};
                     query[item] = convertToStandard(row[item], structure[item].type);
+                    console.log(query);
                     let schema;
                     try {
                         schema = mongoose.model(schemaName);
                     } catch (err) {
                         schema = ApplicationsSchemaStructure.getSchemaModel(schemaName, {});
                     }
-                    console.log("Unique key constraint Check start ...");
+                    console.log("Unique key constraint Check start for " + item);
                     // console.log(query);
                     flag = false;
                     schema.findOne(query, (err, data) => {
                         if (err) throw err;
                         else if (data != null) {
-                            console.log("Not Unique !! Fixed ?");
-                            if(done)
+                            console.log("Not Unique !! Fixed ? ");
+                            console.log(data);
+                            if (done) {
+                                console.log("SENT Unique !! Fixed ? ");
                                 done(null, {
                                     error: true,
                                     message: "Error: Attribute '" + attrName + "' is unique no duplicate allowed!",
                                 });
-                            else {
-                                res(null,{
+                            } else {
+                                console.log("SENT2 Unique !! Fixed ? ");
+                                res(null, {
                                     error: true,
                                     message: "Error: Attribute '" + attrName + "' is unique no duplicate allowed!",
                                 });
-                            }                            
-                            return;
+                            }
+                            //return;
                         } else {
-                            if(done)
-                                done(null,null);
+                            if (done)
+                                done(null, null);
                             else {
-                                res(null);
+                                res(null, null);
                             }
                         }
                     });
                 } else {
-                    console.log(res);
-                    if(done)
-                        done(null,null);
+                    console.log("__ " + res);
+                    if (done)
+                        done(null, null);
                     else {
-                        res(null);
+                        res(null, null);
                     }
                 }
             }
@@ -155,9 +162,14 @@ function schemaMatch(row, structure, schemaName, callback) {
             if (err) {
                 console.log(err);
             } else {
-                console.log("Final Result");
+                console.log(result);
                 if (result) {
                     callback(result);
+                } else if ((typeof result == 'undefined')) {
+                    callback({
+                        error: true,
+                        message: "Some error in insert request"
+                    })
                 } else {
                     callback({
                         error: false
@@ -165,44 +177,6 @@ function schemaMatch(row, structure, schemaName, callback) {
                 }
             }
         });
-    // for (i = 0;(i < bodyKeysLength); i++) {
-    //     if ((typeof structure[bodyKeys[i]].isUnique != undefined && structure[bodyKeys[i]].isUnique) && flag) {
-    //         console.log("Something to check unique");
-    //         let attrName = bodyKeys[i];
-    //         let query = {};
-    //         query[bodyKeys[i]] = convertToStandard(row[bodyKeys[i]], structure[bodyKeys[i]].type);
-    //         let schema;
-    //         try {
-    //             schema = mongoose.model(schemaName);
-    //         } catch (err) {
-    //             schema = ApplicationsSchemaStructure.getSchemaModel(schemaName, {});
-    //         }
-    //         console.log("Unique key constraint Check start ...");
-    //         // console.log(query);
-    //         flag = false;
-    //         schema.findOne(query, (err, data) => {
-    //             if (err) throw err;
-    //             else if (data != null) {
-    //                 console.log("Not Unique !! Fixed ?");
-    //                 //console.log(data);
-    //                 callback({
-    //                     error: true,
-    //                     message: "Error: Attribute '" + attrName + "' is unique no duplicate allowed!",
-    //                 });
-    //                 return;
-    //             }
-    //             flag = true;
-    //         });
-    //     }
-    // }
-
-    // if ((i == bodyKeysLength) && flag) {
-    //     console.log("ending check " + i);
-    //     callback({
-    //         error: false
-    //     });
-    //     return;
-    // }    
 }
 
 //Function for Validation of data types as per schema 

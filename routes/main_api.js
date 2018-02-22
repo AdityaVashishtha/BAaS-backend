@@ -383,6 +383,12 @@ router.post('/insert/:schema/:routeName', (req, res) => {
                 let insertDoc = {};
                 if (req.body.insertDoc) {
                     insertDoc = req.body.insertDoc;
+                } else {
+                    res.json({
+                        success: false,
+                        message: "Request body for insert does not contain insertDoc field/object"
+                    });
+                    return;
                 }
                 console.log(insertDoc);
                 //res.json({test: true});
@@ -796,7 +802,7 @@ router.get("/profile", guardRoute, (req, res) => {
 });
 
 router.get('/test', (req, res) => {
-    console.log(req.body);
+    //console.log(req.user);
     res.json(req.rawHeaders);
 });
 

@@ -198,44 +198,50 @@ router.post('/addAttribute', AuthGuard, (req, res) => {
     let query = {
         name: attribute.schema
     };
-    console.log(attribute);
-    ApplicationsSchemaStructure.findOne(query, (err, data) => {
-        if (err) throw err
-        else if (data !== null) {
-            //console.log("INTI - ");
-            let structure = {};
-            if (data.structure)
-                structure = data.structure;
-            delete attribute.schema;
-            structure[attribute.name] = attribute;
-            let update = {
-                structure: structure
-            };
-            let options = {
-                multi: false
-            };
-            ApplicationsSchemaStructure.update(query, update, options, (err, numAffected) => {
-                if (err) throw err;
-                else if (numAffected.n == 1) {
-                    console.log("Todo-add create index for unique entries");
-                    res.json({
-                        success: true,
-                        message: "Attribute Added succesfully!!"
-                    });
-                } else {
-                    res.json({
-                        success: false,
-                        message: "Something not right!!"
-                    });
-                }
-            });
-        } else {
-            res.json({
-                success: false,
-                message: "Error in adding attribute : Schema not found!!"
-            });
-        }
-    });
+    if(!(attribute.name == 'id' || attribute.name == '_id')) {
+        ApplicationsSchemaStructure.findOne(query, (err, data) => {
+            if (err) throw err
+            else if (data !== null) {
+                //console.log("INTI - ");
+                let structure = {};
+                if (data.structure)
+                    structure = data.structure;
+                delete attribute.schema;
+                structure[attribute.name] = attribute;
+                let update = {
+                    structure: structure
+                };
+                let options = {
+                    multi: false
+                };
+                ApplicationsSchemaStructure.update(query, update, options, (err, numAffected) => {
+                    if (err) throw err;
+                    else if (numAffected.n == 1) {
+                        console.log("Todo-add create index for unique entries");
+                        res.json({
+                            success: true,
+                            message: "Attribute Added succesfully!!"
+                        });
+                    } else {
+                        res.json({
+                            success: false,
+                            message: "Something not right!!"
+                        });
+                    }
+                });
+            } else {
+                res.json({
+                    success: false,
+                    message: "Error in adding attribute : Schema not found!!"
+                });
+            }
+        });
+    } else {
+        res.json({
+            success: false,
+            message: "Attribute name can't be id or _id"
+        });
+    }   
 });
 
 router.post('/insertData', AuthGuard, (req, res) => {
