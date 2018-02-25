@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 //Custom Requires
-const apiRoute = require('./routes/main_api');
+const apiRoute = require('./routes/generated-api-routes');
 const dashboardRoute = require('./routes/dashboard');
 const APP_CONFIG = require('./config/application');
 const User = require('./models/user');
