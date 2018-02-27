@@ -7,7 +7,7 @@ const logger = require('../../utility/logger');
 const AuthRoute = require('./auth');
 const SchemaRoutes = require('./schema-routes');
 const UtilRoutes = require('./util-routes');
-const AasRoutes = require('./ass-routes');
+const AasRoutes = require('./aas-routes');
 const ConfigRoutes = require('./config-routes');
 const RouteHandlerRoutes = require('./route-handler-routes');
 
