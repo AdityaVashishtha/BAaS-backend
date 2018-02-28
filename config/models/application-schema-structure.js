@@ -29,10 +29,17 @@ module.exports.getSchemaModel = function (schemaName, structure) {
     }));
 }
 
+var isUpdateRoute = false;
+
 module.exports.layeredValidationBeforeInsert = function (row, schema, callback) {
     let query = {
         name: schema
-    };
+    };    
+    isUpdateRoute = false;
+    if(row.isUpdateRoute) {
+        delete row.isUpdateRoute;
+        isUpdateRoute=true;
+    }
     let response = {
         error: true,
         message: "",
@@ -75,9 +82,8 @@ function schemaMatch(row, structure, schemaName, callback) {
     let structureKeysLength = structureKeys.length;
     //Matching body with structure to 
     console.log('Matching Structure - Body');
-    for (i = 0;
-        (i < bodyKeysLength); i++) {
-        if (typeof structure[bodyKeys[i]] == 'undefined') {
+    for (i = 0;(i < bodyKeysLength); i++) {        
+        if ((typeof structure[bodyKeys[i]]) === 'undefined') {            
             callback({
                 error: true,
                 message: "Error: Request body values does not match the schema Structure!",
@@ -88,15 +94,26 @@ function schemaMatch(row, structure, schemaName, callback) {
     //Matching required Constraint
     console.log('Matching Required Constraint');
     for (i = 0; i < structureKeysLength; i++) {
-        let index_key = structureKeys[i];
-        if (structure[index_key].isRequired || structure[index_key].isUnique) {
-            if ((typeof row[index_key] == 'undefined') || row[index_key] == null || row[index_key].toString().length <= 0) {
+        let index_key = structureKeys[i];        
+        console.log("Is update route "+isUpdateRoute);
+        if (structure[index_key].isRequired || structure[index_key].isUnique) {                
+            console.log(row[index_key]);
+            if ((typeof row[index_key] === 'undefined') || row[index_key] === null || ((row[index_key].toString() != null) && (row[index_key].toString().length <= 0 )) ) {
                 callback({
                     error: true,
                     message: "Error: Attribute '" + index_key + "' is required in schema but not provided!",
                 });
                 return;
             }
+        } else if(
+                (!isUpdateRoute)&&
+                (!structure[index_key].isRequired) &&
+                (structure[index_key].default && structure[index_key].default.toString().length > 0) &&
+                (!row[index_key])
+                ) {
+                // Default when not required and the value of the row is not present
+                if((typeof row[index_key] === 'undefined'))
+                    row[index_key] = structure[index_key].default;                
         }
     }
     //Matching Unique key constraint
@@ -112,6 +129,11 @@ function schemaMatch(row, structure, schemaName, callback) {
                     let attrName = item;
                     let query = {};
                     query[item] = convertToStandard(row[item], structure[item].type);
+                    if(structure[item].encryptInHash) {
+                        let crypto = require('crypto');
+                        let hash = crypto.createHash('sha256').update(''+row[item]).digest('base64');                        
+                        query[item] = hash;
+                    }
                     console.log(query);
                     let schema;
                     try {
@@ -150,7 +172,7 @@ function schemaMatch(row, structure, schemaName, callback) {
                         }
                     });
                 } else {
-                    console.log("__ " + res);
+                    //console.log("__ " + res);
                     if (done)
                         done(null, null);
                     else {
@@ -192,8 +214,14 @@ function validateTypes(row, structure, schemaName) {
                 error: true,
                 message: "Error: Data type not match for '" + bodyKeys[i] + "' !",
             };
-        } else {
+        } else {            
             row[bodyKeys[i]] = convertToStandard(row[bodyKeys[i]], structure[bodyKeys[i]].type);
+            if(structure[bodyKeys[i]].encryptInHash) {
+                let crypto = require('crypto');
+                let hash = crypto.createHash('sha256').update(''+row[bodyKeys[i]]).digest('base64');
+                console.log(row[bodyKeys[i]] + '  ' + hash);
+                row[bodyKeys[i]] = hash;
+            }
         }
     }
     return {
