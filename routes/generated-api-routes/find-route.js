@@ -23,13 +23,19 @@ router.post('/:schema/:routeName', (req, res) => {
     RouteStructure.findOne(query, (err, data) => {
         if (err) throw err;
         else if (data) {
-            console.log(data);
             if (data.accessControl == 'public') {
                 isLoggedIn = true;
             } else if (data.accessControl == 'admin') {
                 isLoggedIn = require('../config/passport').isLoggedIn(token);
             }
-            if (isLoggedIn && data.operationType === 'find' ) {
+            isLoggedIn = checkForUserBasedSession(req.body, data, returnUserFromToken(token));
+            if (typeof isLoggedIn == 'object') {
+                req.body = isLoggedIn;
+                isLoggedIn = true;
+            }
+            console.log('-- Request After Custom User based session --');
+            console.log(req.body);
+            if (isLoggedIn && data.operationType === 'find') {
                 let Schema, query;
                 try {
                     Schema = mongoose.model(data.schemaName);
@@ -40,7 +46,7 @@ router.post('/:schema/:routeName', (req, res) => {
                 let requestBodyActual = Object.keys(req.body);
                 query = Schema.find();
                 for (i = 0; i < data.constraints.length; i++) {
-                    let item = data.constraints[i];                    
+                    let item = data.constraints[i];
                     let r_attr = item.requestAttribute;
                     let s_attr = item.schemaAttribute;
                     let isChek = requestBodyActual.indexOf(r_attr);
@@ -121,6 +127,13 @@ router.get('/findById/:routeName/:schemaName/:id', (req, res) => {
             } else if (data.accessControl == 'admin') {
                 isLoggedIn = require('../config/passport').isLoggedIn(token);
             }
+            isLoggedIn = checkForUserBasedSession(req.body, data, req.user);
+            if (typeof isLoggedIn == 'object') {
+                req.body = isLoggedIn;
+                isLoggedIn = true;
+            }
+            console.log('-- Request After Custom User based session --');
+            console.log(req.body);
             if (isLoggedIn && idForSchema) {
                 let Schema, query;
                 try {
@@ -154,8 +167,47 @@ router.get('/findById/:routeName/:schemaName/:id', (req, res) => {
     });
 });
 
+function checkForUserBasedSession(request, routeStructure, userSession) {
+    let requestSession = request.session;
+    if (routeStructure.userBasedSession && routeStructure.userBasedSession.isEnable) {
+        console.log("User Based Session Enabled");
+        if (requestSession && ((userSession != null && userSession))) {
+            console.log("User Based Session Enabled");
+            let keys = (routeStructure.userBasedSession.sessionAttribute);
+            for (let i = 0; i < keys.length; i++) {
+                console.log('keys ' + keys[i]);
+                if (requestSession[keys[i]]) {
+                    console.log("Session Check " + userSession[keys[i]] + "  " + requestSession[keys[i]]);
+                    if (userSession[keys[i]] != requestSession[keys[i]]) {
+                        return false;
+                    } else {
+                        //TODO Add user session variable as insert value
+                        console.log('Before replace text');
+                        if (request[keys[i]]) {
+                            //console.log(request);
+                            //request = JSON.parse(JSON.stringify(request).replace('$__'+keys[i],userSession[keys[i]]));
+                            request[keys[i]] = userSession[keys[i]];
+                            //console.log(request);
+                        } else {
+                            return false;
+                        }
+                    }
+                } else {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
+    } else {
+        console.log("User Based Session Disabled");
+        return true;
+    }
+    return request;
+}
+
 function guardRoute(req, res, next) {
-    token = req.headers.authorization.split(' ')[1];    
+    token = req.headers.authorization.split(' ')[1];
     jwt.verify(token, APP_CONFIG.app_secret, function (err, decoded) {
         if (err) {
             res.status(401).send();
@@ -167,11 +219,21 @@ function guardRoute(req, res, next) {
 
 function loggedIn(token) {
     return jwt.verify(token, APP_CONFIG.app_secret, function (err, decoded) {
-        if (err) {            
+        if (err) {
             return false;
-        } else if (decoded.authType = 'api.user') {            
-            console.log(decoded);
+        } else if (decoded.authType = 'api.user') {
+            //console.log(decoded);
             return true;
+        }
+    });
+}
+
+function returnUserFromToken(token) {
+    return jwt.verify(token, APP_CONFIG.app_secret, function (err, decoded) {
+        if (err) {
+            return false;
+        } else if (decoded.authType = 'api.user') {
+            return decoded;
         }
     });
 }

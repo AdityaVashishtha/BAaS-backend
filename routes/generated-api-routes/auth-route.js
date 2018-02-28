@@ -198,8 +198,8 @@ router.get('/google/redirect',
         session: false
     }),
     function (req, res) {
-        //console.log("Google Callback Returned");
-        let newUser = req.user._json;
+        let newUser = req.user;
+        console.log(newUser);
         if (newUser == null) {
             res.status(404).send();
         } else {
@@ -209,6 +209,7 @@ router.get('/google/redirect',
                 if (err) throw err;
                 else {
                     newUser.authType = 'api.user';
+                    //console.log(JSON.stringify(newUser));
                     res.json({
                         success: true,
                         data: {
@@ -239,7 +240,8 @@ router.get('/facebook/redirect',
     }),
     function (req, res) {
         //console.log("Google Callback Returned");
-        let newUser = req.user._json;
+        let newUser = req.user;
+        console.log(newUser);
         if (newUser == null) {
             res.status(404).send();
         } else {

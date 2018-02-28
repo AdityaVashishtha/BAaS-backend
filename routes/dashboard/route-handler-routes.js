@@ -13,7 +13,7 @@ const router = express.Router();
 //Route related routes
 router.post('/addRoute', AuthGuard, (req, res) => {
     let routeModel = req.body;
-    let routeData;
+    let routeData;    
     if (routeModel.operationType == 'findById') {
         routeData = {
             name: routeModel.name,
@@ -22,7 +22,8 @@ router.post('/addRoute', AuthGuard, (req, res) => {
             requestByJSON: false,
             accessControl: routeModel.accessControl,
             createdAt: new Date(),
-            requestMethod: 'GET'
+            requestMethod: 'GET',
+            userBasedSession: routeModel.userBasedSession
         }
     } else {
         routeData = {
@@ -34,15 +35,15 @@ router.post('/addRoute', AuthGuard, (req, res) => {
             constraints: routeModel.constraint,
             accessControl: routeModel.accessControl,
             createdAt: new Date(),
-            requestMethod: 'POST'
+            requestMethod: 'POST',
+            userBasedSession: routeModel.userBasedSession
         }
     }
-    let route = new RouteStructure(routeData);
-    //console.log(route);
+    let route = new RouteStructure(routeData);    
     query = {
         name: routeData.name,
         schemaName: routeData.schemaName
-    };
+    };    
     RouteStructure.findOne(query, (err, data) => {
         if (err) throw err;
         else if (data) {

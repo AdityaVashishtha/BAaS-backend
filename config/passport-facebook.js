@@ -51,7 +51,9 @@ module.exports = function (passport) {
                                     }, (err, data) => {
                                         if (err) done(err, null);
                                         else if (data.n > 0) {
-                                            done(null, profile);
+                                            user = user._doc;
+                                            user.profile = profile;
+                                            done(null, user);
                                         } else {
                                             done(null, null);
                                         }
@@ -66,7 +68,9 @@ module.exports = function (passport) {
                                         if (err) {
                                             done(err, null);
                                         } else {
-                                            done(null, profile);
+                                            let user = tempUser._doc;
+                                            user.profile = profile;
+                                            done(null, user);
                                         }
                                     });
                                 }
