@@ -209,7 +209,7 @@ function validateTypes(row, structure, schemaName) {
     let structureKeysLength = structureKeys.length;
     //Matching body with structure to 
     for (i = 0; i < bodyKeysLength; i++) {
-        if (!isValid(row[bodyKeys[i]], structure[bodyKeys[i]].type)) {
+        if (!isValid(row[bodyKeys[i]], structure[bodyKeys[i]])) {            
             return {
                 error: true,
                 message: "Error: Data type not match for '" + bodyKeys[i] + "' !",
@@ -230,7 +230,10 @@ function validateTypes(row, structure, schemaName) {
     }
 }
 
-function isValid(value, type) {
+function isValid(value, structure) {
+    let type = structure.type;
+    let pattern = structure.regexPattern;
+    let enumValues = structure.enumValues;
     value = value.toString().trim();
     if (value.length <= 0)
         return true;
@@ -243,13 +246,16 @@ function isValid(value, type) {
             return validator.isBoolean(value);
         case 'json':
             return validator.isJSON(value);
-        case 'enum-todo':
-            console.log("TODO ENUM");
-            return false;
+        case 'enum':
+            if(enumValues) {
+                return validator.isIn(value,enumValues);
+            } else {
+                return false;
+            }
         case 'date-iso':
             return validator.isISO8601(value);
         case 'timestamp':
-            return ((new Date(145689720)).getTime() > 0);
+            return ((new Date(value)).getTime() > 0);
         case 'integer':
             return validator.isInt(value);
         case 'decimal-only':
@@ -257,7 +263,10 @@ function isValid(value, type) {
         case 'hexadecimal-number':
             return validator.isHexadecimal(value);
         case 'array':
-            return (x.constructor == Array);
+                    if(validator.isJSON(value))
+                        return (JSON.parse(value).constructor == Array);
+                    else 
+                        return false;
         case 'alphanumeric-only':
             return validator.isAlphanumeric(value);
         case 'email':
@@ -265,10 +274,12 @@ function isValid(value, type) {
         case 'url':
             return validator.isURL(value);
         case 'mobile-phone':
-            return validator.isMobilePhone(value);
-        case 'regex-validator-todo':
-            console.log("TODO Custom Validator");
-            return false;
+            return validator.isMobilePhone(value,'en-IN',{strictMode: true});
+        case 'regex-validator':
+            if(pattern)
+                return validator.matches(value,pattern);
+            else
+                return false;
         default:
             return true;
     }
@@ -288,14 +299,13 @@ function convertToStandard(value, type) {
         case 'boolean':
             return value == 'true' ? true : false;
         case 'json':
-            return value;
-        case 'enum-todo':
-            console.log("TODO ENUM");
-            return false;
+            return JSON.stringify(JSON.parse(value));
+        case 'enum':
+            return value;            
         case 'date-iso':
             return new Date(value);
         case 'timestamp':
-            return parseInt(value);
+            return new Date(value).valueOf();
         case 'integer':
             return parseInt(value);
         case 'decimal-only':
@@ -312,11 +322,10 @@ function convertToStandard(value, type) {
             return value;
         case 'mobile-phone':
             return value;
-        case 'regex-validator-todo':
-            console.log("TODO Custom Validator");
-            return false;
+        case 'regex-validator':            
+            return value;
         default:
-            return false;
+            return null;
     }
 }
 
