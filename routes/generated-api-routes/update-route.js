@@ -9,7 +9,7 @@ const ApplicationsSchemaStructure = require("../../config/models/application-sch
 const RouteStructure = require("../../config/models/route-structure");
 const ApplicationConfig = require("../../config/models/application-config");
 const APP_CONFIG = require("../../config/application");
-
+const UtilityFunction = require("../../utility/utilityFunctions");
 router.post("/:schema/:routeName", (req, res) => {
   let token = "",
     isLoggedIn = false;
@@ -75,34 +75,12 @@ router.post("/:schema/:routeName", (req, res) => {
                 let s_attr = item.schemaAttribute;
                 let isChek = requestBodyActual.indexOf(r_attr);
                 if (isChek >= 0) {
-                  if (item.constraint.toString() === "equal") {
-                    console.log("Equal Modifier");
-                    query = query.where(s_attr, req.body[r_attr].toString());
-                  } else if (item.constraint.toString() === "greater-than") {
-                    console.log("Greater Modifier");
-                    query = query.where(s_attr).gte(req.body[r_attr]);
-                  } else if (item.constraint.toString() === "less-than") {
-                    console.log("Lesser Modifier");
-                    query = query
-                      .where(s_attr)
-                      .gte(req.body[r_attr].toString());
-                  } else if (item.constraint.toString() === "regex") {
-                    console.log("Regex Modifier");
-                    try {
-                      query = query
-                        .where(s_attr)
-                        .regex(new RegExp(req.body[r_attr]));
-                    } catch (error) {
-                      console.log("SOME ERROR - CHECK");
-                      query = query.where(s_attr, "");
-                      console.log(error);
-                    }
-                  } else {
-                    console.log({
-                      success: false,
-                      message: "Error: Some huge failure !! -- TODO"
-                    });
-                  }
+                  query = UtilityFunction.applyConstraintOnQuery(
+                    query,
+                    item.constraint.toString(),
+                    s_attr,
+                    req.body[r_attr]
+                  );
                 } else {
                   res.json({
                     success: false,
@@ -113,8 +91,20 @@ router.post("/:schema/:routeName", (req, res) => {
                 }
               }
               query.exec((err, data) => {
-                if (err) throw err;
-                if (data) {
+                if (err) {
+                  if (err.code == 2) {
+                    res.json({
+                      success: false,
+                      message: "Error in enum attributes constraint."
+                    });
+                  } else {
+                    res.json({
+                      success: false,
+                      message: "Some Error in request attributes."
+                    });
+                  }
+                  console.log(err);
+                } else if (data) {
                   res.json({
                     success: true,
                     count: data.length,

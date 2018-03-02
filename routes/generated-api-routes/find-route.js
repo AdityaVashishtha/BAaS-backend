@@ -60,25 +60,27 @@ router.post('/:schema/:routeName', (req, res) => {
                         return;
                     }
                 }
-                if(data.select && data.select.isEnable) {
-                    console.log(data.select);
+                if(data.select && data.select.isEnable) {                    
                     query = query.select(data.select.attributes);
                 }
-                if(data.limit && data.limit.isEnable && data.limit.value) {
-                    console.log(data.limit);
+                if(data.limit && data.limit.isEnable && data.limit.value) {                    
                     query = query.limit(data.limit.value);
                 }
-                if(data.sort && data.sort.isEnable && data.sort.attributes) {
-                    console.log(data.sort);
+                if(data.sort && data.sort.isEnable && data.sort.attributes) {                    
                     query = query.sort(data.sort.attributes);
                 }
                 query.exec((err, data) => {
                     if (err) {
-                        if(err.code == 2) {
+                        if (err.code == 2) {
                             res.json({
-                                success: false,
-                                message: "Some Error in request attributes.",
-                            });                            
+                              success: false,
+                              message: "Error in enum attributes constraint."
+                            });
+                        } else {
+                            res.json({
+                              success: false,
+                              message: "Some Error in request attributes."
+                            });
                         }
                         console.log(err);
                     }
