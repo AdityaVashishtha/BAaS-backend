@@ -37,6 +37,15 @@ const RouteSchema = mongoose.Schema({
     },
     userBasedSession: {
         type: Object
+    },
+    select: {
+        type: Object
+    },
+    limit: {
+        type: Object
+    },
+    sort: {
+        type: Object
     }
 });
 

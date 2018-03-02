@@ -23,7 +23,7 @@ router.post('/addRoute', AuthGuard, (req, res) => {
             accessControl: routeModel.accessControl,
             createdAt: new Date(),
             requestMethod: 'GET',
-            userBasedSession: routeModel.userBasedSession
+            userBasedSession: routeModel.userBasedSession,            
         }
     } else {
         routeData = {
@@ -36,7 +36,10 @@ router.post('/addRoute', AuthGuard, (req, res) => {
             accessControl: routeModel.accessControl,
             createdAt: new Date(),
             requestMethod: 'POST',
-            userBasedSession: routeModel.userBasedSession
+            userBasedSession: routeModel.userBasedSession,
+            select: routeModel.select,
+            sort: routeModel.sort,
+            limit: routeModel.limit,
         }
     }
     let route = new RouteStructure(routeData);    

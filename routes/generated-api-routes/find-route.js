@@ -51,41 +51,38 @@ router.post('/:schema/:routeName', (req, res) => {
                     let s_attr = item.schemaAttribute;
                     let isChek = requestBodyActual.indexOf(r_attr);
                     if (isChek >= 0) {
-                        if (item.constraint.toString() === 'equal') {
-                            console.log("Equal Modifier")
-                            query = query.where(s_attr, req.body[r_attr].toString())
-                        } else if (item.constraint.toString() === 'greater-than') {
-                            console.log("Greater Modifier")
-                            query = query.where(s_attr).gte(req.body[r_attr]);
-                        } else if (item.constraint.toString() === 'less-than') {
-                            console.log("Lesser Modifier")
-                            query = query.where(s_attr).lte(req.body[r_attr].toString())
-                        } else if (item.constraint.toString() === 'regex') {
-                            console.log("Regex Modifier");
-                            try {
-                                query = query.where(s_attr).regex(new RegExp(req.body[r_attr]));
-                            } catch (error) {
-                                console.log("SOME ERROR - CHECK");
-                                query = query.where(s_attr, "");
-                                console.log(error);
-                            }
-                        } else {
-                            console.log({
-                                success: false,
-                                message: "Error: Some huge failure !! -- TODO"
-                            });
-                        }
+                        query = applyConstraintOnQuery(query,item.constraint.toString(),s_attr,req.body[r_attr]);                        
                     } else {
                         res.json({
                             success: false,
-                            message: "ERROR: Request Body Does not containt right parameters",
+                            message: "ERROR: Request Body Does not containt right parameters for query!!",
                         });
                         return;
                     }
                 }
+                if(data.select && data.select.isEnable) {
+                    console.log(data.select);
+                    query = query.select(data.select.attributes);
+                }
+                if(data.limit && data.limit.isEnable && data.limit.value) {
+                    console.log(data.limit);
+                    query = query.limit(data.limit.value);
+                }
+                if(data.sort && data.sort.isEnable && data.sort.attributes) {
+                    console.log(data.sort);
+                    query = query.sort(data.sort.attributes);
+                }
                 query.exec((err, data) => {
-                    if (err) throw err;
-                    if (data) {
+                    if (err) {
+                        if(err.code == 2) {
+                            res.json({
+                                success: false,
+                                message: "Some Error in request attributes.",
+                            });                            
+                        }
+                        console.log(err);
+                    }
+                    else if (data) {
                         res.json({
                             success: true,
                             count: data.length,
@@ -106,6 +103,47 @@ router.post('/:schema/:routeName', (req, res) => {
         }
     });
 });
+
+function applyConstraintOnQuery(query,constraint,s_attr,value) {    
+    console.log("Applying constraint on values ...") ;
+    switch (constraint) {
+        case 'equal':        
+            query = query.where(s_attr, value);
+            break;
+        case 'not-equal':
+            query = query.where(s_attr).ne(value);
+            break;
+        case 'greater-than':        
+            query = query.where(s_attr).gt(value);
+            break;
+        case 'greater-than-equal':        
+            query = query.where(s_attr).gte(value);
+            break;
+        case 'less-than':        
+            query = query.where(s_attr).lt(value);
+            break;
+        case 'less-than-equal':        
+            query = query.where(s_attr).lte(value);
+            break;
+        case 'in-array':        
+            query = query.where(s_attr).in(value);
+            break;
+        case 'not-in-array':
+            query = query.where(s_attr).nin(value);
+            break;
+        case 'regex':
+            try {
+                query = query.where(s_attr).regex(new RegExp(value));
+            } catch (error) {
+                console.error("Regular Expression Not correct Error ::");                
+                console.error(error);
+            }
+            break;
+        default:            
+            break;    
+    }
+    return query;    
+}
 
 router.get('/findById/:routeName/:schemaName/:id', (req, res) => {
     let idForSchema = req.params.id;
