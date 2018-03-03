@@ -37,6 +37,7 @@ if (APP_CONFIG.needInitialization)
 //Middleware setup
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 
 var hitCounter = 0;
