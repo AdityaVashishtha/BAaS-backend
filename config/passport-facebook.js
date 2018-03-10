@@ -14,8 +14,8 @@ module.exports = function (passport) {
         if (err) throw err;
         if (authConfig) {
             let facebookOptions = authConfig.facebookLoginOption;
-            const FACEBOOK_APP_ID = facebookOptions.clientID.trim();
-            const FACEBOOK_APP_SECRET = facebookOptions.clientSecrete.trim();
+            const FACEBOOK_APP_ID = facebookOptions.clientID;
+            const FACEBOOK_APP_SECRET = facebookOptions.clientSecrete;
             //console.log(facebookOptions);
             if (facebookOptions.isEnabled) {
                 console.log("Facebook Login Enabled");

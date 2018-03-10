@@ -6,7 +6,7 @@ const passport = require('passport');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const cors = require('cors');
-
+const cookieParser = require('cookie-parser');
 //Custom Requires
 const apiRoute = require('./routes/generated-api-routes');
 const dashboardRoute = require('./routes/dashboard');
@@ -36,6 +36,7 @@ if (APP_CONFIG.needInitialization)
 
 //Middleware setup
 app.use(cors());
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
