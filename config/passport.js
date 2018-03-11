@@ -28,13 +28,11 @@ module.exports.isAuthenticated = function(passport) {
     return passport.authenticate('jwt', { session: false });    
 }
 
-module.exports.isLoggedIn = function(token){  
-    //console.log(token)  ;
+module.exports.isLoggedIn = function(token){      
     return jwt.verify(token, APP_CONFIG.app_secret, function (err, decoded) {
         if (err) {            
             return false;
-        } else if (decoded.type && decoded.type == 'admin') { 
-            //console.log(decoded);
+        } else if (decoded.type && decoded.type == 'admin') {             
             return true;
         } 
     });

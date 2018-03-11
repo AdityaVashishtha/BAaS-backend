@@ -29,10 +29,17 @@ module.exports.getSchemaModel = function (schemaName, structure) {
     }));
 }
 
+var isUpdateRoute = false;
+
 module.exports.layeredValidationBeforeInsert = function (row, schema, callback) {
     let query = {
         name: schema
-    };
+    };    
+    isUpdateRoute = false;
+    if(row.isUpdateRoute) {
+        delete row.isUpdateRoute;
+        isUpdateRoute=true;
+    }
     let response = {
         error: true,
         message: "",
@@ -75,9 +82,8 @@ function schemaMatch(row, structure, schemaName, callback) {
     let structureKeysLength = structureKeys.length;
     //Matching body with structure to 
     console.log('Matching Structure - Body');
-    for (i = 0;
-        (i < bodyKeysLength); i++) {
-        if (typeof structure[bodyKeys[i]] == 'undefined') {
+    for (i = 0;(i < bodyKeysLength); i++) {        
+        if ((typeof structure[bodyKeys[i]]) === 'undefined') {            
             callback({
                 error: true,
                 message: "Error: Request body values does not match the schema Structure!",
@@ -87,67 +93,90 @@ function schemaMatch(row, structure, schemaName, callback) {
     }
     //Matching required Constraint
     console.log('Matching Required Constraint');
-    for (i = 0; i < bodyKeysLength; i++) {
-        if (structure[bodyKeys[i]].isRequired || structure[bodyKeys[i]].isRequired) {
-            if (row[bodyKeys[i]] == null || row[bodyKeys[i]].toString().length <= 0) {
+    for (i = 0; i < structureKeysLength; i++) {
+        let index_key = structureKeys[i];        
+        console.log("Is update route "+isUpdateRoute);
+        if (structure[index_key].isRequired || structure[index_key].isUnique) {                
+            console.log(row[index_key]);
+            if ((typeof row[index_key] === 'undefined') || row[index_key] === null || ((row[index_key].toString() != null) && (row[index_key].toString().length <= 0 )) ) {
                 callback({
                     error: true,
-                    message: "Error: Attribute '" + bodyKeys[i] + "' is required in schema but not provided!",
+                    message: "Error: Attribute '" + index_key + "' is required in schema but not provided!",
                 });
                 return;
             }
+        } else if(
+                (!isUpdateRoute)&&
+                (!structure[index_key].isRequired) &&
+                (structure[index_key].default && structure[index_key].default.toString().length > 0) &&
+                (!row[index_key])
+                ) {
+                // Default when not required and the value of the row is not present
+                if((typeof row[index_key] === 'undefined'))
+                    row[index_key] = structure[index_key].default;                
         }
     }
     //Matching Unique key constraint
     console.log('Matching Unique Attribute Property ...' + bodyKeysLength);
     waterfall(
-        structureKeys.map((item) => {
-            return function (res,done) {
-                console.log("Outside unique");                
-                if (structure[item].isUnique) {
-                    console.log("Something to check unique");
+        bodyKeys.map((item) => {
+            return function (res, done) {
+                console.log("Outside unique");
+                if(done && res != null)
+                    done(null,res);
+                else if (structure[item].isUnique) {
+                    console.log("Check unique " + item);
                     let attrName = item;
                     let query = {};
                     query[item] = convertToStandard(row[item], structure[item].type);
+                    if(structure[item].encryptInHash) {
+                        let crypto = require('crypto');
+                        let hash = crypto.createHash('sha256').update(''+row[item]).digest('base64');                        
+                        query[item] = hash;
+                    }
+                    console.log(query);
                     let schema;
                     try {
                         schema = mongoose.model(schemaName);
                     } catch (err) {
                         schema = ApplicationsSchemaStructure.getSchemaModel(schemaName, {});
                     }
-                    console.log("Unique key constraint Check start ...");
+                    console.log("Unique key constraint Check start for " + item);
                     // console.log(query);
                     flag = false;
                     schema.findOne(query, (err, data) => {
                         if (err) throw err;
                         else if (data != null) {
-                            console.log("Not Unique !! Fixed ?");
-                            if(done)
+                            console.log("Not Unique !! Fixed ? ");
+                            console.log(data);
+                            if (done) {
+                                console.log("SENT Unique !! Fixed ? ");
                                 done(null, {
                                     error: true,
                                     message: "Error: Attribute '" + attrName + "' is unique no duplicate allowed!",
                                 });
-                            else {
-                                res(null,{
+                            } else {
+                                console.log("SENT2 Unique !! Fixed ? ");
+                                res(null, {
                                     error: true,
                                     message: "Error: Attribute '" + attrName + "' is unique no duplicate allowed!",
                                 });
-                            }                            
-                            return;
+                            }
+                            //return;
                         } else {
-                            if(done)
-                                done(null,null);
+                            if (done)
+                                done(null, null);
                             else {
-                                res(null);
+                                res(null, null);
                             }
                         }
                     });
                 } else {
-                    console.log(res);
-                    if(done)
-                        done(null,null);
+                    //console.log("__ " + res);
+                    if (done)
+                        done(null, null);
                     else {
-                        res(null);
+                        res(null, null);
                     }
                 }
             }
@@ -155,9 +184,14 @@ function schemaMatch(row, structure, schemaName, callback) {
             if (err) {
                 console.log(err);
             } else {
-                console.log("Final Result");
+                console.log(result);
                 if (result) {
                     callback(result);
+                } else if ((typeof result == 'undefined')) {
+                    callback({
+                        error: true,
+                        message: "Some error in insert request"
+                    })
                 } else {
                     callback({
                         error: false
@@ -165,44 +199,6 @@ function schemaMatch(row, structure, schemaName, callback) {
                 }
             }
         });
-    // for (i = 0;(i < bodyKeysLength); i++) {
-    //     if ((typeof structure[bodyKeys[i]].isUnique != undefined && structure[bodyKeys[i]].isUnique) && flag) {
-    //         console.log("Something to check unique");
-    //         let attrName = bodyKeys[i];
-    //         let query = {};
-    //         query[bodyKeys[i]] = convertToStandard(row[bodyKeys[i]], structure[bodyKeys[i]].type);
-    //         let schema;
-    //         try {
-    //             schema = mongoose.model(schemaName);
-    //         } catch (err) {
-    //             schema = ApplicationsSchemaStructure.getSchemaModel(schemaName, {});
-    //         }
-    //         console.log("Unique key constraint Check start ...");
-    //         // console.log(query);
-    //         flag = false;
-    //         schema.findOne(query, (err, data) => {
-    //             if (err) throw err;
-    //             else if (data != null) {
-    //                 console.log("Not Unique !! Fixed ?");
-    //                 //console.log(data);
-    //                 callback({
-    //                     error: true,
-    //                     message: "Error: Attribute '" + attrName + "' is unique no duplicate allowed!",
-    //                 });
-    //                 return;
-    //             }
-    //             flag = true;
-    //         });
-    //     }
-    // }
-
-    // if ((i == bodyKeysLength) && flag) {
-    //     console.log("ending check " + i);
-    //     callback({
-    //         error: false
-    //     });
-    //     return;
-    // }    
 }
 
 //Function for Validation of data types as per schema 
@@ -213,13 +209,19 @@ function validateTypes(row, structure, schemaName) {
     let structureKeysLength = structureKeys.length;
     //Matching body with structure to 
     for (i = 0; i < bodyKeysLength; i++) {
-        if (!isValid(row[bodyKeys[i]], structure[bodyKeys[i]].type)) {
+        if (!isValid(row[bodyKeys[i]], structure[bodyKeys[i]])) {            
             return {
                 error: true,
                 message: "Error: Data type not match for '" + bodyKeys[i] + "' !",
             };
-        } else {
+        } else {            
             row[bodyKeys[i]] = convertToStandard(row[bodyKeys[i]], structure[bodyKeys[i]].type);
+            if(structure[bodyKeys[i]].encryptInHash) {
+                let crypto = require('crypto');
+                let hash = crypto.createHash('sha256').update(''+row[bodyKeys[i]]).digest('base64');
+                console.log(row[bodyKeys[i]] + '  ' + hash);
+                row[bodyKeys[i]] = hash;
+            }
         }
     }
     return {
@@ -228,7 +230,10 @@ function validateTypes(row, structure, schemaName) {
     }
 }
 
-function isValid(value, type) {
+function isValid(value, structure) {
+    let type = structure.type;
+    let pattern = structure.regexPattern;
+    let enumValues = structure.enumValues;
     value = value.toString().trim();
     if (value.length <= 0)
         return true;
@@ -241,13 +246,16 @@ function isValid(value, type) {
             return validator.isBoolean(value);
         case 'json':
             return validator.isJSON(value);
-        case 'enum-todo':
-            console.log("TODO ENUM");
-            return false;
+        case 'enum':
+            if(enumValues) {
+                return validator.isIn(value,enumValues);
+            } else {
+                return false;
+            }
         case 'date-iso':
             return validator.isISO8601(value);
         case 'timestamp':
-            return ((new Date(145689720)).getTime() > 0);
+            return ((new Date(value)).getTime() > 0);
         case 'integer':
             return validator.isInt(value);
         case 'decimal-only':
@@ -255,7 +263,10 @@ function isValid(value, type) {
         case 'hexadecimal-number':
             return validator.isHexadecimal(value);
         case 'array':
-            return (x.constructor == Array);
+                    if(validator.isJSON(value))
+                        return (JSON.parse(value).constructor == Array);
+                    else 
+                        return false;
         case 'alphanumeric-only':
             return validator.isAlphanumeric(value);
         case 'email':
@@ -263,10 +274,12 @@ function isValid(value, type) {
         case 'url':
             return validator.isURL(value);
         case 'mobile-phone':
-            return validator.isMobilePhone(value);
-        case 'regex-validator-todo':
-            console.log("TODO Custom Validator");
-            return false;
+            return validator.isMobilePhone(value,'en-IN',{strictMode: true});
+        case 'regex-validator':
+            if(pattern)
+                return validator.matches(value,pattern);
+            else
+                return false;
         default:
             return true;
     }
@@ -286,14 +299,13 @@ function convertToStandard(value, type) {
         case 'boolean':
             return value == 'true' ? true : false;
         case 'json':
-            return value;
-        case 'enum-todo':
-            console.log("TODO ENUM");
-            return false;
+            return JSON.stringify(JSON.parse(value));
+        case 'enum':
+            return value;            
         case 'date-iso':
             return new Date(value);
         case 'timestamp':
-            return parseInt(value);
+            return new Date(value).valueOf();
         case 'integer':
             return parseInt(value);
         case 'decimal-only':
@@ -310,11 +322,10 @@ function convertToStandard(value, type) {
             return value;
         case 'mobile-phone':
             return value;
-        case 'regex-validator-todo':
-            console.log("TODO Custom Validator");
-            return false;
+        case 'regex-validator':            
+            return value;
         default:
-            return false;
+            return null;
     }
 }
 

@@ -11,6 +11,7 @@ const RouteStructure = require('../config/models/route-structure');
 const ApplicationConfig = require('../config/models/application-config');
 
 require('../config/passport-oauth-google')(passport);
+require('../config/passport-facebook')(passport);
 
 const APP_CONFIG = require('../config/application');
 var tableName = 'authUser';
@@ -38,7 +39,7 @@ router.get('/', (req, res) => {
     //         console.log("Something");
     //     }
     // });    
-    let upTime = parseInt(process.uptime()/3600)+':'+parseInt(process.uptime()/60)+':'+parseInt(process.uptime()%60);    
+    let upTime = parseInt(process.uptime() / 3600) + ':' + parseInt(process.uptime() / 60) + ':' + parseInt(process.uptime() % 60);
     res.json({
         success: true,
         message: 'Server is Running',
@@ -58,13 +59,13 @@ router.post('/register', (req, res) => {
         newUser.signedIn = new Date().toString();
         newUser.provider = 'email/username';
         newUser.identifier = user.username;
-        let authConfig = ApplicationConfig.getAuthConfig((err,config)=>{   
+        let authConfig = ApplicationConfig.getAuthConfig((err, config) => {
             let validateUserField = false;
-            if(config.primaryLogin == "email")
+            if (config.primaryLogin == "email")
                 validateUserField = validator.isEmail(newUser.identifier);
-            else 
+            else
                 validateUserField = validator.isAlphanumeric(newUser.identifier);
-            
+            console.log(config);
             if (validateUserField) {
                 let Schema;
                 try {
@@ -106,7 +107,7 @@ router.post('/register', (req, res) => {
                 });
             }
         });
-        
+
     } else {
         res.json({
             success: false,
@@ -145,7 +146,7 @@ router.post('/auth', (req, res) => {
                         else {
                             newUser.authType = 'api.user';
                             res.json({
-                                success: true,                                
+                                success: true,
                                 data: {
                                     token: 'Bearer ' + token,
                                     user: newUser
@@ -178,14 +179,14 @@ router.post('/auth', (req, res) => {
     }
 });
 
-function isGoogleAuthEnabled(req,res,next) {
-    ApplicationConfig.getAuthConfig((err,authConfig)=>{
-        if(err) throw err;
-        if(authConfig) {
-            if(authConfig.googleLoginOption.isEnabled) {
+function isGoogleAuthEnabled(req, res, next) {
+    ApplicationConfig.getAuthConfig((err, authConfig) => {
+        if (err) throw err;
+        if (authConfig) {
+            if (authConfig.googleLoginOption.isEnabled) {
                 next();
             } else {
-                res.status(404).send();
+                res.status(404).send("<h1>Resource NOT found</h1>");
             }
         } else {
             res.status(500).send();
@@ -193,15 +194,35 @@ function isGoogleAuthEnabled(req,res,next) {
     });
 }
 
-router.get('/auth/google',isGoogleAuthEnabled,
-  passport.authenticate('google', { scope: ['https://www.googleapis.com/auth/plus.login'] }));
+function isFacebookAuthEnabled(req, res, next) {
+    ApplicationConfig.getAuthConfig((err, authConfig) => {
+        if (err) throw err;
+        if (authConfig) {
+            if (authConfig.facebookLoginOption.isEnabled) {
+                next();
+            } else {
+                res.status(404).send("<h1>Resource NOT found</h1>");
+            }
+        } else {
+            res.status(500).send();
+        }
+    });
+}
 
-router.get('/auth/google/redirect', 
-    passport.authenticate('google', { session: false }),
-    function(req, res) {
+
+router.get('/auth/google', isGoogleAuthEnabled,
+    passport.authenticate('google', {
+        scope: ['https://www.googleapis.com/auth/plus.login']
+    }));
+
+router.get('/auth/google/redirect',
+    passport.authenticate('google', {
+        session: false
+    }),
+    function (req, res) {
         //console.log("Google Callback Returned");
         let newUser = req.user._json;
-        if(newUser == null) {
+        if (newUser == null) {
             res.status(404).send();
         } else {
             jwt.sign(newUser, APP_CONFIG.app_secret, {
@@ -211,7 +232,7 @@ router.get('/auth/google/redirect',
                 else {
                     newUser.authType = 'api.user';
                     res.json({
-                        success: true,                    
+                        success: true,
                         data: {
                             token: 'Bearer ' + token,
                             user: newUser
@@ -219,20 +240,61 @@ router.get('/auth/google/redirect',
                         message: "User Succesfully logged in"
                     });
                 }
-            });        
-        }        
-});
+            });
+        }
+    });
 
-router.post('/auth/changePassword',(req,res)=>{
+// router.get('/auth/facebook',isFacebookAuthEnabled,
+//   passport.authenticate('facebook', { scope: ['https://www.googleapis.com/auth/plus.login'] }));
+
+router.get('/auth/facebook', isFacebookAuthEnabled,
+    passport.authenticate('facebook'));
+
+// app.get('/auth/facebook/callback',
+//   passport.authenticate('facebook', { successRedirect: '/',
+//                                       failureRedirect: '/login' }));
+
+
+router.get('/auth/facebook/redirect',
+    passport.authenticate('facebook', {
+        session: false
+    }),
+    function (req, res) {
+        //console.log("Google Callback Returned");
+        let newUser = req.user._json;
+        if (newUser == null) {
+            res.status(404).send();
+        } else {
+            jwt.sign(newUser, APP_CONFIG.app_secret, {
+                expiresIn: authConfigs.tokenExpiryInterval
+            }, function (err, token) {
+                if (err) throw err;
+                else {
+                    newUser.authType = 'api.user';
+                    res.json({
+                        success: true,
+                        data: {
+                            token: 'Bearer ' + token,
+                            user: newUser
+                        },
+                        message: "User Succesfully logged in"
+                    });
+                }
+            });
+        }
+    });
+
+
+router.post('/auth/changePassword', (req, res) => {
     let profile = req.body;
     console.log(profile);
-    if(profile && profile != null) {
+    if (profile && profile != null) {
         let oldPassword = profile.oldPassword;
         let newPassword = profile.newPassword;
         let username = profile.username;
-        if(oldPassword && newPassword && oldPassword) {
-            let salt = bcrypt.genSaltSync(10);            
-            let newHash = bcrypt.hashSync(newPassword, salt);            
+        if (oldPassword && newPassword && oldPassword) {
+            let salt = bcrypt.genSaltSync(10);
+            let newHash = bcrypt.hashSync(newPassword, salt);
             let Schema;
             try {
                 Schema = mongoose.model(authConfigs.authTable);
@@ -240,34 +302,36 @@ router.post('/auth/changePassword',(req,res)=>{
                 Schema = ApplicationsSchemaStructure.getSchemaModel(authConfigs.authTable, {});
             }
             query = {
-                identifier: username                
+                identifier: username
             }
-            Schema.findOne(query,(err,data)=>{                
-                if(err) throw err;
-                else if(data != null) {
-                    data = data._doc;                    
+            Schema.findOne(query, (err, data) => {
+                if (err) throw err;
+                else if (data != null) {
+                    data = data._doc;
                     let isMatch = bcrypt.compareSync(oldPassword, data.password);
-                    if(isMatch) {
-                        Schema.update(query,{password: newHash},(err,data)=>{
-                            if(err) throw err;
-                            else if(data != null) {
+                    if (isMatch) {
+                        Schema.update(query, {
+                            password: newHash
+                        }, (err, data) => {
+                            if (err) throw err;
+                            else if (data != null) {
                                 res.json({
                                     success: true,
                                     message: `Password for ${username} changed Successfully!`
                                 });
-                            } else {                                
+                            } else {
                                 res.json({
                                     success: false,
                                     message: `Some Error in changing password`
                                 });
                             }
-                        });                        
+                        });
                     } else {
                         res.json({
                             success: false,
                             message: `Username or Password does not match`
                         });
-                    }                    
+                    }
                 } else {
                     res.json({
                         success: false,
@@ -280,7 +344,7 @@ router.post('/auth/changePassword',(req,res)=>{
                 success: false,
                 message: "Request Body is incomplete!!"
             });
-        }        
+        }
     } else {
         res.json({
             success: false,
@@ -292,8 +356,9 @@ router.post('/auth/changePassword',(req,res)=>{
 // Adding Insert Option
 router.post('/insert/:schema/:routeName', (req, res) => {
     console.log(req.body);
-    let token='',isLoggedIn=false;
-    if(req.headers.authorization)
+    let token = '',
+        isLoggedIn = false;
+    if (req.headers.authorization)
         token = req.headers.authorization.split(' ')[1];
     isLoggedIn = loggedIn(token);
     let query = {
@@ -302,11 +367,11 @@ router.post('/insert/:schema/:routeName', (req, res) => {
     };
     RouteStructure.findOne(query, (err, data) => {
         if (err) throw err;
-        else if(data) {
-            if(data.accessControl == 'public') {
+        else if (data) {
+            if (data.accessControl == 'public') {
                 isLoggedIn = true;
-            } 
-            if(isLoggedIn) {
+            }
+            if (isLoggedIn) {
                 let Schema, query;
                 try {
                     Schema = mongoose.model(data.schemaName);
@@ -316,21 +381,27 @@ router.post('/insert/:schema/:routeName', (req, res) => {
                 let requestBodyFromStructure = data.requestBody;
                 let requestBodyActual = Object.keys(req.body);
                 let insertDoc = {};
-                if(req.body.insertDoc) {
+                if (req.body.insertDoc) {
                     insertDoc = req.body.insertDoc;
+                } else {
+                    res.json({
+                        success: false,
+                        message: "Request body for insert does not contain insertDoc field/object"
+                    });
+                    return;
                 }
                 console.log(insertDoc);
                 //res.json({test: true});
                 query = insertDoc;
                 schemaName = data.schemaName;
-                ApplicationsSchemaStructure.layeredValidationBeforeInsert(query,schemaName,(err,result)=>{
-                    if(err) throw err;
-                    else if(result == null) {
+                ApplicationsSchemaStructure.layeredValidationBeforeInsert(query, schemaName, (err, result) => {
+                    if (err) throw err;
+                    else if (result == null) {
                         res.json({
                             success: false,
                             message: "Some error occured !!",
                         });
-                    } else if(result.error) {
+                    } else if (result.error) {
                         // do stuff here 
                         res.json({
                             success: false,
@@ -340,16 +411,18 @@ router.post('/insert/:schema/:routeName', (req, res) => {
                         let schema;
                         try {
                             schema = mongoose.model(schemaName);
-                        } catch(err) {                
-                            schema = ApplicationsSchemaStructure.getSchemaModel(schemaName,{any:{}});
-                        }    
+                        } catch (err) {
+                            schema = ApplicationsSchemaStructure.getSchemaModel(schemaName, {
+                                any: {}
+                            });
+                        }
                         query = result.row;
                         delete query._id;
-                        query._insertAt = new Date().toDateString()+ ' ' + new Date().toTimeString() ;
-                        query._updated = new Date().toDateString()+ ' ' + new Date().toTimeString();
+                        query._insertAt = new Date().toDateString() + ' ' + new Date().toTimeString();
+                        query._updated = new Date().toDateString() + ' ' + new Date().toTimeString();
                         let doc = new schema(query);
-                        doc.save(err=>{
-                            if(err) throw err;
+                        doc.save(err => {
+                            if (err) throw err;
                             else {
                                 res.json({
                                     success: true,
@@ -377,7 +450,7 @@ router.post('/insert/:schema/:routeName', (req, res) => {
                 // });
             } else {
                 res.status(401).send();
-            }                        
+            }
         } else {
             res.status(404).send();
         }
@@ -386,8 +459,9 @@ router.post('/insert/:schema/:routeName', (req, res) => {
 
 
 router.post('/find/:schema/:routeName', (req, res) => {
-    let token='',isLoggedIn=false;
-    if(req.headers.authorization)
+    let token = '',
+        isLoggedIn = false;
+    if (req.headers.authorization)
         token = req.headers.authorization.split(' ')[1];
     isLoggedIn = loggedIn(token);
     let query = {
@@ -396,13 +470,13 @@ router.post('/find/:schema/:routeName', (req, res) => {
     };
     RouteStructure.findOne(query, (err, data) => {
         if (err) throw err;
-        else if(data) {
-            if(data.accessControl == 'public') {
+        else if (data) {
+            if (data.accessControl == 'public') {
                 isLoggedIn = true;
-            } else if(data.accessControl == 'admin') {
+            } else if (data.accessControl == 'admin') {
                 isLoggedIn = require('../config/passport').isLoggedIn(token);
             }
-            if(isLoggedIn) {
+            if (isLoggedIn) {
                 let Schema, query;
                 try {
                     Schema = mongoose.model(data.schemaName);
@@ -434,7 +508,7 @@ router.post('/find/:schema/:routeName', (req, res) => {
                                 query = query.where(s_attr).regex(new RegExp(req.body[r_attr]));
                             } catch (error) {
                                 console.log("SOME ERROR - CHECK");
-                                query = query.where(s_attr,"");
+                                query = query.where(s_attr, "");
                                 console.log(error);
                             }
                         } else {
@@ -452,12 +526,12 @@ router.post('/find/:schema/:routeName', (req, res) => {
                     }
                 }
                 query.exec((err, data) => {
-                    if (err) throw err;                
-                    if(data) {
+                    if (err) throw err;
+                    if (data) {
                         res.json({
                             success: true,
                             count: data.length,
-                            data: data,                        
+                            data: data,
                         });
                     } else {
                         res.json({
@@ -468,7 +542,7 @@ router.post('/find/:schema/:routeName', (req, res) => {
                 });
             } else {
                 res.status(401).send();
-            }                        
+            }
         } else {
             res.status(404).send();
         }
@@ -477,8 +551,9 @@ router.post('/find/:schema/:routeName', (req, res) => {
 
 /* TODO - Change delete method to delete from post */
 router.post('/delete/:schema/:routeName', (req, res) => {
-    let token='',isLoggedIn=false;
-    if(req.headers.authorization)
+    let token = '',
+        isLoggedIn = false;
+    if (req.headers.authorization)
         token = req.headers.authorization.split(' ')[1];
     isLoggedIn = loggedIn(token);
     let query = {
@@ -487,13 +562,13 @@ router.post('/delete/:schema/:routeName', (req, res) => {
     };
     RouteStructure.findOne(query, (err, data) => {
         if (err) throw err;
-        else if(data) {
-            if(data.accessControl == 'public') {
+        else if (data) {
+            if (data.accessControl == 'public') {
                 isLoggedIn = true;
-            } else if(data.accessControl == 'admin') {
+            } else if (data.accessControl == 'admin') {
                 isLoggedIn = require('../config/passport').isLoggedIn(token);
             }
-            if(isLoggedIn) {
+            if (isLoggedIn) {
                 let Schema, query;
                 try {
                     Schema = mongoose.model(data.schemaName);
@@ -525,7 +600,7 @@ router.post('/delete/:schema/:routeName', (req, res) => {
                                 query = query.where(s_attr).regex(new RegExp(req.body[r_attr]));
                             } catch (error) {
                                 console.log("SOME ERROR - CHECK");
-                                query = query.where(s_attr,"");
+                                query = query.where(s_attr, "");
                                 console.log(error);
                             }
                         } else {
@@ -543,12 +618,12 @@ router.post('/delete/:schema/:routeName', (req, res) => {
                     }
                 }
                 query.exec((err, data) => {
-                    if (err) throw err;                
-                    if(data) {
+                    if (err) throw err;
+                    if (data) {
                         res.json({
                             success: true,
                             count: data.length,
-                            data: data,                        
+                            data: data,
                         });
                     } else {
                         res.json({
@@ -559,7 +634,7 @@ router.post('/delete/:schema/:routeName', (req, res) => {
                 });
             } else {
                 res.status(401).send();
-            }                        
+            }
         } else {
             res.status(404).send();
         }
@@ -567,8 +642,9 @@ router.post('/delete/:schema/:routeName', (req, res) => {
 });
 
 router.post('/update/:schema/:routeName', (req, res) => {
-    let token='',isLoggedIn=false;
-    if(req.headers.authorization)
+    let token = '',
+        isLoggedIn = false;
+    if (req.headers.authorization)
         token = req.headers.authorization.split(' ')[1];
     isLoggedIn = loggedIn(token);
     let query = {
@@ -577,13 +653,13 @@ router.post('/update/:schema/:routeName', (req, res) => {
     };
     RouteStructure.findOne(query, (err, data) => {
         if (err) throw err;
-        else if(data) {
-            if(data.accessControl == 'public') {
+        else if (data) {
+            if (data.accessControl == 'public') {
                 isLoggedIn = true;
-            } else if(data.accessControl == 'admin') {
+            } else if (data.accessControl == 'admin') {
                 isLoggedIn = require('../config/passport').isLoggedIn(token);
             }
-            if(isLoggedIn) {
+            if (isLoggedIn) {
                 let Schema, query;
                 try {
                     Schema = mongoose.model(data.schemaName);
@@ -593,11 +669,13 @@ router.post('/update/:schema/:routeName', (req, res) => {
                 let requestBodyFromStructure = data.requestBody;
                 let requestBodyActual = Object.keys(req.body);
                 let updateDoc = {};
-                if(req.body.updateDoc) {
+                if (req.body.updateDoc) {
                     updateDoc = req.body.updateDoc;
                 }
                 updateDoc._updated = new Date().toLocaleDateString();
-                query = Schema.update({},updateDoc,{multi: true});
+                query = Schema.update({}, updateDoc, {
+                    multi: true
+                });
                 for (i = 0; i < data.constraints.length; i++) {
                     let item = data.constraints[i];
                     //console.log(item);
@@ -620,7 +698,7 @@ router.post('/update/:schema/:routeName', (req, res) => {
                                 query = query.where(s_attr).regex(new RegExp(req.body[r_attr]));
                             } catch (error) {
                                 console.log("SOME ERROR - CHECK");
-                                query = query.where(s_attr,"");
+                                query = query.where(s_attr, "");
                                 console.log(error);
                             }
                         } else {
@@ -638,12 +716,12 @@ router.post('/update/:schema/:routeName', (req, res) => {
                     }
                 }
                 query.exec((err, data) => {
-                    if (err) throw err;                
-                    if(data) {
+                    if (err) throw err;
+                    if (data) {
                         res.json({
                             success: true,
                             count: data.length,
-                            data: data,                        
+                            data: data,
                         });
                     } else {
                         res.json({
@@ -654,7 +732,7 @@ router.post('/update/:schema/:routeName', (req, res) => {
                 });
             } else {
                 res.status(401).send();
-            }                        
+            }
         } else {
             res.status(404).send();
         }
@@ -662,11 +740,12 @@ router.post('/update/:schema/:routeName', (req, res) => {
 });
 
 
-router.get('/findById/:routeName/:schemaName/:id',(req,res)=>{
+router.get('/findById/:routeName/:schemaName/:id', (req, res) => {
     let idForSchema = req.params.id;
     let schemaName = req.params.schemaName;
-    let token='',isLoggedIn=false;
-    if(req.headers.authorization)
+    let token = '',
+        isLoggedIn = false;
+    if (req.headers.authorization)
         token = req.headers.authorization.split(' ')[1];
     isLoggedIn = loggedIn(token);
     let query = {
@@ -675,28 +754,28 @@ router.get('/findById/:routeName/:schemaName/:id',(req,res)=>{
     };
     RouteStructure.findOne(query, (err, data) => {
         if (err) throw err;
-        else if(data) {
-            if(data.accessControl == 'public') {
+        else if (data) {
+            if (data.accessControl == 'public') {
                 isLoggedIn = true;
-            } else if(data.accessControl == 'admin') {
+            } else if (data.accessControl == 'admin') {
                 isLoggedIn = require('../config/passport').isLoggedIn(token);
             }
-            if(isLoggedIn && idForSchema) {
+            if (isLoggedIn && idForSchema) {
                 let Schema, query;
                 try {
                     Schema = mongoose.model(data.schemaName);
                 } catch (err) {
                     Schema = ApplicationsSchemaStructure.getSchemaModel(data.schemaName, {});
-                }     
+                }
                 idForSchema = validator.isHexadecimal(idForSchema) && idForSchema.length == 24 ? idForSchema : null;
                 //console.log(idForSchema);
-                Schema.findById(idForSchema,(err, data) => {
-                    if (err) throw err;                
-                    if(data) {
+                Schema.findById(idForSchema, (err, data) => {
+                    if (err) throw err;
+                    if (data) {
                         res.json({
                             success: true,
                             count: data.length,
-                            data: data,                        
+                            data: data,
                         });
                     } else {
                         res.json({
@@ -707,7 +786,7 @@ router.get('/findById/:routeName/:schemaName/:id',(req,res)=>{
                 });
             } else {
                 res.status(401).send();
-            }                        
+            }
         } else {
             res.status(404).send();
         }
@@ -722,8 +801,8 @@ router.get("/profile", guardRoute, (req, res) => {
     });
 });
 
-router.get('/test',(req,res)=>{
-    console.log(req.body);
+router.get('/test', (req, res) => {
+    //console.log(req.user);
     res.json(req.rawHeaders);
 });
 
@@ -739,14 +818,14 @@ function guardRoute(req, res, next) {
     });
 }
 
-function loggedIn(token) {    
+function loggedIn(token) {
     return jwt.verify(token, APP_CONFIG.app_secret, function (err, decoded) {
-        if (err) {            
+        if (err) {
             return false;
-        } else if(decoded.authType = 'api.user') { 
+        } else if (decoded.authType = 'api.user') {
             console.log(decoded);
             return true;
-        }        
+        }
     });
 }
 
