@@ -30,6 +30,45 @@ router.get('/getApplicationDetails', AuthGuard, (req, res) => {
     });
 });
 
+router.post('/exportToCSV',AuthGuard,(req,res)=>{    
+    let reqbody = req.body;;
+    console.log(reqbody);
+    // var query = ApplicationsSchemaStructure.findOne({
+    //     //name: tableName
+    // });
+    // query.exec((err, data) => {
+    //     if (err) throw err;
+    //     else if (data !== null) {
+    //         let schema;
+    //         try {
+    //             schema = mongoose.model(tableName);
+    //         } catch (err) {
+    //             schema = ApplicationsSchemaStructure.getSchemaModel(tableName, data.structure);
+    //         }
+    //         query = schema.find();
+    //         query.exec((err, rows) => {
+    //             if (err) throw err;
+    //             else {
+    //                 res.json({
+    //                     success: true,
+    //                     data: {
+    //                         structure: data.structure,
+    //                         rows: rows
+    //                     },
+    //                     message: "Fetch Succesfull!!"
+    //                 });
+    //             }
+    //         });
+    //     } else {
+    //         res.json({
+    //             success: false,
+    //             data: null,
+    //             message: "Nothing found!!"
+    //         });
+    //     }
+    // });
+});
+
 router.get('/logs', (req, res) => {
     let logs = logger.getFreshLOG();    
     res.json({
