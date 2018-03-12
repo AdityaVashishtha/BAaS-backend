@@ -60,6 +60,7 @@ router.post('/createSchema', AuthGuard, (req, res) => {
 router.post('/deleteSchema', AuthGuard, (req, res) => {
     let schema = req.body;
     if (schema.name) {
+        console.log('deleteStart');
         if (schema.name == USER_TABLE_NAME) {
             res.json({
                 success: false,
@@ -90,21 +91,30 @@ router.post('/deleteSchema', AuthGuard, (req, res) => {
                             } catch (err) {
                                 ModalSchema = ApplicationsSchemaStructure.getSchemaModel(schema.name, {});
                             }
+                            console.log("Finished deleting schema : '" + schema.name + "' ...");
                             ModalSchema.collection.drop({}, (err, data) => {
-                                if (err) throw err;
-                                else if (data) {
+                                if (err) {
+                                    if (err.code == 26) {
+                                        res.json({
+                                            success: true,
+                                            message: "Schema deleted But No data present!!"
+                                        });
+                                    } else {
+                                        throw err;
+                                    }
+                                } else if (data) {
                                     console.log(data);
                                     res.json({
                                         success: true,
                                         message: "Schema with routes completely removed!!"
-                                    })
+                                    });
                                 }
                             });
+
                         }
                     })
                 }
             });
-            console.log("Finished deleting schema : '" + schema.name + "' ...");
         }
     } else {
         res.json({
@@ -146,6 +156,11 @@ router.get('/table/:tableName', AuthGuard, (req, res) => {
             query.exec((err, rows) => {
                 if (err) throw err;
                 else {
+                    //password removal from table
+                    if (tableName == 'authuser') {
+                        delete data.structure.password;
+                        delete rows.password;
+                    }
                     res.json({
                         success: true,
                         data: {
@@ -167,8 +182,6 @@ router.get('/table/:tableName', AuthGuard, (req, res) => {
 });
 
 router.get('/getSchemaDetail/:tableName', AuthGuard, (req, res) => {
-    logger.LOG("Get Schema Started on port ");
-
     let tableName = req.params.tableName;
     var query = ApplicationsSchemaStructure.findOne({
         name: tableName
@@ -198,44 +211,203 @@ router.post('/addAttribute', AuthGuard, (req, res) => {
     let query = {
         name: attribute.schema
     };
-    console.log(attribute);
-    ApplicationsSchemaStructure.findOne(query, (err, data) => {
-        if (err) throw err
-        else if (data !== null) {
-            //console.log("INTI - ");
-            let structure = {};
-            if (data.structure)
-                structure = data.structure;
-            delete attribute.schema;
-            structure[attribute.name] = attribute;
-            let update = {
-                structure: structure
-            };
-            let options = {
-                multi: false
-            };
-            ApplicationsSchemaStructure.update(query, update, options, (err, numAffected) => {
+    if (!(attribute.name == 'id' || attribute.name == '_id')) {
+        ApplicationsSchemaStructure.findOne(query, (err, data) => {
+            if (err) throw err
+            else if (data !== null) {
+                //console.log("INTI - ");
+                let structure = {};
+                if (data.structure)
+                    structure = data.structure;
+                delete attribute.schema;
+                structure[attribute.name] = attribute;
+                let update = {
+                    structure: structure
+                };
+                let options = {
+                    multi: false
+                };
+                ApplicationsSchemaStructure.update(query, update, options, (err, numAffected) => {
+                    if (err) throw err;
+                    else if (numAffected.n == 1) {
+                        console.log("Todo-add create index for unique entries");
+                        res.json({
+                            success: true,
+                            message: "Attribute Added succesfully!!"
+                        });
+                    } else {
+                        res.json({
+                            success: false,
+                            message: "Something not right!!"
+                        });
+                    }
+                });
+            } else {
+                res.json({
+                    success: false,
+                    message: "Error in adding attribute : Schema not found!!"
+                });
+            }
+        });
+    } else {
+        res.json({
+            success: false,
+            message: "Attribute name can't be id or _id"
+        });
+    }
+});
+
+router.post('/removeAttribute', AuthGuard, (req, res) => {
+    let attribute = req.body.attribute;
+    let schemaName = req.body.schemaName;
+    if (attribute && schemaName) {
+        let attributeName = attribute.name;
+        let query = {
+            name: schemaName
+        };
+        console.log(req.body);
+        ApplicationsSchemaStructure.findOne(query, (err, data) => {
+            if (err) throw err;
+            else {
+                let structure = data.structure;
+                if (structure[attributeName])
+                    delete structure[attributeName]
+                console.log(structure);
+                ApplicationsSchemaStructure.update({
+                    name: schemaName
+                }, {
+                    structure: structure
+                }, {
+                    new: true
+                }, (err, data) => {
+                    if (err) throw err;
+                    else if (data && data != null) {
+                        console.log(data);
+                        query = {
+                            $and: [{
+                                schemaName: schemaName
+                            }, {
+                                constraints: {
+                                    $elemMatch: {
+                                        "schemaAttribute": attributeName
+                                    }
+                                }
+                            }]
+                        }
+                        RouteStructure.remove(query, (err, data) => {
+                            if (err) throw err;
+                            else if (data != null) {
+                                console.log(data);
+                                let ModalSchema;
+                                query = {
+                                    "$unset": {
+                                        
+                                    }
+                                };
+                                query["$unset"][attributeName]=true;
+                                try {
+                                    ModalSchema = mongoose.model(schemaName);
+                                } catch (err) {
+                                    ModalSchema = ApplicationsSchemaStructure.getSchemaModel(schemaName, {});;
+                                }                                
+                                ModalSchema.update({},query,{
+                                    upsert: false,
+                                    multi: true,
+                                    new: true
+                                }, (err, data) => {
+                                    if (err) throw err;
+                                    else if (data != null) {
+                                        console.log(data);
+                                        res.json({
+                                            success: true,
+                                            message: 'Attribute Delete succesfull!'
+                                        });
+                                    } else {
+                                        res.json({
+                                            success: false,
+                                            message: 'Attribute deletion in table failed after 3/4 completion!!'
+                                        });
+                                    }
+                                });
+                            } else {
+                                res.json({
+                                    success: false,
+                                    message: 'Attribute deletion half reach route deletion problem!!'
+                                });
+                            }
+                        });
+                    } else {
+                        res.json({
+                            success: false,
+                            message: 'Attribute Deletion Unsuccessfull !!'
+                        });
+                    }
+                });
+            }
+        });
+    } else {
+        res.json({
+            success: false,
+            message: 'RequestBodyError: Request body empty!!'
+        });
+    }
+});
+
+
+router.post('/editSchemaStructure', AuthGuard, (req, res) => {
+    if (req.body) {
+        let schemaName = req.body.schemaName;
+        let schemaStructure = req.body.structure;
+        if (schemaName && schemaStructure) {
+            ApplicationsSchemaStructure.findOne({
+                name: schemaName
+            }, (err, data) => {
                 if (err) throw err;
-                else if (numAffected.n == 1) {
-                    console.log("Todo-add create index for unique entries");
-                    res.json({
-                        success: true,
-                        message: "Attribute Added succesfully!!"
+                else if (data && data != null) {
+                    let newStructure = data._doc.structure;
+                    //console.log(newStructure);
+                    for (i = 0; i < schemaStructure.length; i++) {
+                        if (schemaStructure[i].name)
+                            newStructure[schemaStructure[i].name] = schemaStructure[i];
+                    }
+                    ApplicationsSchemaStructure.update({
+                        name: schemaName
+                    }, {
+                        structure: newStructure
+                    }, (err, data) => {
+                        if (err) throw err;
+                        else if (data && data != null) {
+                            //console.log(data);
+                            res.json({
+                                success: true,
+                                message: 'Updated schema structure successfully!'
+                            });
+                        } else {
+                            res.json({
+                                success: false,
+                                message: 'Database error please try again later!'
+                            });
+                        }
                     });
                 } else {
                     res.json({
                         success: false,
-                        message: "Something not right!!"
+                        message: 'Database error please try again later!'
                     });
                 }
             });
         } else {
             res.json({
                 success: false,
-                message: "Error in adding attribute : Schema not found!!"
+                message: 'ErrorInRequestBody: Wrong request body'
             });
         }
-    });
+    } else {
+        res.json({
+            success: false,
+            message: 'ErrorInRequestBody: Eempty request body'
+        });
+    }
 });
 
 router.post('/insertData', AuthGuard, (req, res) => {
@@ -286,7 +458,7 @@ router.post('/insertData', AuthGuard, (req, res) => {
 
 router.post('/deleteData', AuthGuard, (req, res) => {
     if (req.body) {
-        let query = req.body.data;        
+        let query = req.body.data;
         let schemaName = req.body.schema;
         if (query && schemaName) {
             let ModalSchema;
@@ -295,7 +467,9 @@ router.post('/deleteData', AuthGuard, (req, res) => {
             } catch (err) {
                 ModalSchema = ApplicationsSchemaStructure.getSchemaModel(schemaName, {});
             }
-            ModalSchema.remove({_id: query._id}, (err, data) => {
+            ModalSchema.remove({
+                _id: query._id
+            }, (err, data) => {
                 if (err) throw err;
                 else if (data != null && data.n > 0) {
                     res.json({

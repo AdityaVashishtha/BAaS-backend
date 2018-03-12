@@ -34,6 +34,18 @@ const RouteSchema = mongoose.Schema({
     requestMethod: {
         type: String,        
         default: 'POST',
+    },
+    userBasedSession: {
+        type: Object
+    },
+    select: {
+        type: Object
+    },
+    limit: {
+        type: Object
+    },
+    sort: {
+        type: Object
     }
 });
 

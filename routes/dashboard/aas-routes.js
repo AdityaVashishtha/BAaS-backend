@@ -6,11 +6,13 @@ const logger = require('../../utility/logger');
 const AuthGuard = require('../../config/passport').isAuthenticated(passport);
 const AnalyticsSchemaStructure = require('../../config/models/analytics-schema-structure');
 const router = express.Router();
-
+const aasJSON=require("../../config/aasJSON/index");
 
 //Analytics Route
-router.post('/createAnalyticsSchema',AuthGuard,(req,res)=>{    
+router.get('/',(req,res)=>{res.send("OK");})
+router.post('/createAnalyticsSchema',AuthGuard,(req,res)=>{ 
     let schema = req.body;    
+	console.log(schema);
     schema.structure = {};
     let newSchema = new AnalyticsSchemaStructure(schema);
     let query = { name: schema.name };
@@ -34,7 +36,7 @@ router.post('/createAnalyticsSchema',AuthGuard,(req,res)=>{
         }
     });
 });
-router.get('/getAnalyticsSchemas',AuthGuard,(req,res)=>{        
+router.get('/getAnalyticsSchemas',(req,res)=>{        
     let query = AnalyticsSchemaStructure.find();
     //query.select('name');
     query.exec((err,schemas)=>{
@@ -49,7 +51,7 @@ router.get('/getAnalyticsSchemas',AuthGuard,(req,res)=>{
     });    
 });
 
-router.get('/getAnalyticsSchema/:analyticsName',AuthGuard,(req,res)=>{        
+router.get('/getAnalyticsSchema/:analyticsName',(req,res)=>{        
     let analyticsName = req.params.analyticsName;
 	let query = AnalyticsSchemaStructure.findOne({name:analyticsName});
     //query.select('name');
@@ -65,7 +67,7 @@ router.get('/getAnalyticsSchema/:analyticsName',AuthGuard,(req,res)=>{
     });    
 });
 
-router.post('/addAnalyticsStructure',AuthGuard,(req,res)=>{
+router.post('/addAnalyticsStructure',(req,res)=>{
     let analyticsName = req.body.name;
     let query = {name: analyticsName};
     AnalyticsSchemaStructure.findOne(query,(err,data)=>{
@@ -98,5 +100,10 @@ router.post('/addAnalyticsStructure',AuthGuard,(req,res)=>{
             });
         }
     });
+});
+router.get('/getAasJSON',AuthGuard,(req,res)=>{
+
+   res.send(JSON.stringify(aasJSON.steps));
+   
 });
 module.exports = router;
