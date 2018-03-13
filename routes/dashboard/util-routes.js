@@ -31,8 +31,52 @@ router.get('/getApplicationDetails', AuthGuard, (req, res) => {
 });
 
 router.post('/exportToCSV',AuthGuard,(req,res)=>{    
-    let reqbody = req.body;;
+    const Json2csvParser = require('json2csv').Parser;
+    let reqbody = req.body;
     console.log(reqbody);
+    const fields = ['car', 'color'];
+    const opts = {
+        fields
+    };
+    const myCars = [
+      {
+        "car": "Audi",
+        "price": 40000,
+        "color": "blue"
+      }, {
+        "car": "BMW",
+        "price": 35000,
+        "color": "black"
+      }, {
+        "car": "Porsche",
+        "price": 60000,
+        "color": "green"
+      }
+    ];
+      const parser = new Json2csvParser(opts);
+      const csv = parser.parse(myCars);
+      //var csv = json2csv({data:'', fields: fields });
+   
+      res.set("Content-Disposition", "attachment;filename=authors.csv");
+      res.set("Content-Type", "application/octet-stream");
+    console.log(csv)
+      //res.send(csv);
+      var fs = require('fs');
+
+    fs.writeFile('demo-sysy.csv', csv, 'utf8', function (err) {
+    if (err) {
+        console.log('Some error occured - file either not saved or corrupted file saved.');
+        res.status(500).send();
+    } else{
+        res.json({
+            success: true,
+            message: "COnverted",
+            data: {
+                url: "demo-sysy.csv"
+            }
+        })
+    }
+    });
     // var query = ApplicationsSchemaStructure.findOne({
     //     //name: tableName
     // });
