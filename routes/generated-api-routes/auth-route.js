@@ -34,12 +34,12 @@ function sendMail(receiver, content, done) {
             }
         });
         var mailOptions = {
-            from: `${APP_CONFIG.appName}_no-reply@gmail.com`,
+            from: `${APP_CONFIG.appName}_no_reply@gmail.com`,
             to: receiver,
             subject: `Email Verficiation for ${APP_CONFIG.appName}`,
             html: content
         };
-
+        console.log(process.env.BAAS_USER_ID,' ',process.env.BAAS_EMAIL_KEY);
         transporter.sendMail(mailOptions, function (error, info) {
             if (error) {
                done(error, false)
@@ -247,7 +247,7 @@ router.post("/login", (req, res) => {
             success: false,
             exception: {
                 exceptionType: "BodyEmpty",
-                exceptionMessage: "Request body for register was empty."
+                exceptionMessage: "Request body for login was empty."
             }
         });
     }
@@ -314,7 +314,7 @@ router.get(
                         newUser.authType = "api.user";
                         //console.log(JSON.stringify(newUser));
                         //setting reply into the cookies
-                        res.cookie('token','Bearer '+token);
+                        res.cookie('token','Bearer '+token,{maxAge: 1000*60*60});
                         ApplicationConfig.getAuthConfig((err, authConfig)=>{
                             if(err) console.log(err);
                             else {
@@ -459,18 +459,20 @@ router.post("/changePassword", (req, res) => {
 
 router.get('/getUserFromToken',(req,res)=>{
     token=req.cookies.token;
-    //console.log(token)
+    console.log(req.headers)
+    console.log(token)
+    console.log('decoded')
     if(token) {
         token = token.trim().split(' ')[1];
         jwt.verify(token, APP_CONFIG.app_secret, function (err, decoded) {
             if (err) {     
                 console.log(err)       
                 res.status(401).send();            
-            } else if (decoded) {
+            } else if (decoded) {                
                 res.json({
                     success: true,
                     message: "User data retrived",
-                    token: token,
+                    token: 'Bearer '+ token,
                     user: decoded
                 })
             }

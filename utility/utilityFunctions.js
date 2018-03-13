@@ -45,3 +45,52 @@ module.exports.applyConstraintOnQuery = function(
   }
   return query;
 };
+
+
+module.exports.checkForUserBasedSession = function(request, routeStructure, userSession) {
+  let requestSession = request.session;
+  console.log("inside check for user based session ..");      
+  if ( 
+      ( request && request != null) &&
+      (userSession != null && userSession) 
+     ) {
+      console.log("Request not null as well userSession");
+      let keys = (routeStructure.userBasedSession.sessionAttribute);
+      let numberOfConstraint = routeStructure.userBasedSession.sessionAttribute.length;
+      let tempConstraint;
+      for (let i = 0; i < numberOfConstraint; i++) {
+          console.log(keys[i]);
+          tempConstraint = keys[i];
+          console.log(tempConstraint)
+          if(tempConstraint && tempConstraint.replaceKey) {
+            console.log("session constraint object");
+            if (
+                userSession[tempConstraint.replaceWith] &&
+                userSession[tempConstraint.replaceWith] != null
+              ) {                                
+                if (request[tempConstraint.replaceKey]) {
+                  console.log('All set replace text in request');                    
+                  //request = JSON.parse(JSON.stringify(request).replace('$__'+keys[i],userSession[keys[i]]));
+                  request[tempConstraint.replaceKey] = userSession[tempConstraint.replaceWith];                                                                  
+                } if(request.updateDoc && request.updateDoc[tempConstraint.replaceKey]) {
+                  request.updateDoc[tempConstraint.replaceKey] = userSession[tempConstraint.replaceWith];
+                } if(request.insertDoc && request.insertDoc[tempConstraint.replaceKey]) {
+                  request.insertDoc[tempConstraint.replaceKey] = userSession[tempConstraint.replaceWith];
+                } else {
+                  request[tempConstraint.replaceKey] = userSession[tempConstraint.replaceWith];
+                }
+            } else {
+              console.log("Session is null")
+              return false;
+            }
+          } else {
+            console.log("Error due to constraint new object");
+            return false;
+          }                          
+      }
+  } else {
+    console.log("User session or request is null ..");
+      return false;
+  }  
+  return request;
+}

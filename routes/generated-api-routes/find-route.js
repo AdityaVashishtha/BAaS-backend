@@ -8,7 +8,7 @@ const ApplicationsSchemaStructure = require('../../config/models/application-sch
 const RouteStructure = require('../../config/models/route-structure');
 const ApplicationConfig = require('../../config/models/application-config');
 const APP_CONFIG = require('../../config/application');
-
+const UtilityFunction = require("../../utility/utilityFunctions");
 
 router.post('/:schema/:routeName', (req, res) => {
     let token = '',
@@ -31,6 +31,20 @@ router.post('/:schema/:routeName', (req, res) => {
             let isUserSessionEnabled;
             if(data.userBasedSession && data.userBasedSession.isEnable) { 
                 req.user = returnUserFromToken(token);               
+                isUserSessionEnabled = UtilityFunction.checkForUserBasedSession(req.body, data, req.user);
+                //console.log(req.user)
+                if (typeof isUserSessionEnabled == 'object') {
+                    req.body = isUserSessionEnabled;
+                    isLoggedIn = true;
+                    //console.log('Request After Custom User based session');
+                    //console.log(req.body);
+                } else if(isUserSessionEnabled === false) {
+                    isLoggedIn = false;
+                }
+            }
+            /* let isUserSessionEnabled;
+            if(data.userBasedSession && data.userBasedSession.isEnable) { 
+                req.user = returnUserFromToken(token);               
                 isUserSessionEnabled = checkForUserBasedSession(req.body, data, req.user);
                 console.log(req.user)
                 if (typeof isUserSessionEnabled == 'object') {
@@ -41,7 +55,7 @@ router.post('/:schema/:routeName', (req, res) => {
                 } else if(isUserSessionEnabled === false) {
                     isLoggedIn = false;
                 }
-            }            
+            } */            
             if (isLoggedIn && data.operationType === 'find') {
                 let Schema, query;
                 try {
@@ -175,19 +189,19 @@ router.get('/findById/:routeName/:schemaName/:id', (req, res) => {
                 isLoggedIn = require('../config/passport').isLoggedIn(token);
             }
             let isUserSessionEnabled;
-            if(data.userBasedSession && data.userBasedSession.isEnable) {     
-                req.user = returnUserFromToken(token);                          
-                isUserSessionEnabled = checkForUserBasedSession(req.body, data, req.user);
-                console.log(isUserSessionEnabled)
+            if(data.userBasedSession && data.userBasedSession.isEnable) { 
+                req.user = returnUserFromToken(token);               
+                isUserSessionEnabled = UtilityFunction.checkForUserBasedSession(req.body, data, req.user);
+                //console.log(req.user)
                 if (typeof isUserSessionEnabled == 'object') {
                     req.body = isUserSessionEnabled;
                     isLoggedIn = true;
-                    console.log('-- Request After Custom User based session --');
-                    console.log(req.body);
+                    //console.log('Request After Custom User based session');
+                    //console.log(req.body);
                 } else if(isUserSessionEnabled === false) {
                     isLoggedIn = false;
                 }
-            }            
+            }                       
             if (isLoggedIn && idForSchema) {
                 let Schema, query;
                 try {

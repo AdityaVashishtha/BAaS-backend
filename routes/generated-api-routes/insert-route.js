@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const ApplicationsSchemaStructure = require('../../config/models/application-schema-structure');
 const RouteStructure = require('../../config/models/route-structure');
 const APP_CONFIG = require('../../config/application');
-
+const UtilityFunction = require("../../utility/utilityFunctions");
 // Default insert route
 router.post('/:schema/:routeName', (req, res) => {
     console.log(req.body);
@@ -26,6 +26,20 @@ router.post('/:schema/:routeName', (req, res) => {
                 isLoggedIn = true;
             } else if (data.accessControl == 'admin') {
                 isLoggedIn = require('../config/passport').isLoggedIn(token);
+            }
+            let isUserSessionEnabled;
+            if(data.userBasedSession && data.userBasedSession.isEnable) { 
+                req.user = returnUserFromToken(token);               
+                isUserSessionEnabled = UtilityFunction.checkForUserBasedSession(req.body, data, req.user);
+                //console.log(req.user)
+                if (typeof isUserSessionEnabled == 'object') {
+                    req.body = isUserSessionEnabled;
+                    isLoggedIn = true;
+                    //console.log('Request After Custom User based session');
+                    //console.log(req.body);
+                } else if(isUserSessionEnabled === false) {
+                    isLoggedIn = false;
+                }
             }
             if (isLoggedIn && data.operationType === 'insert') {
                 let Schema, query;

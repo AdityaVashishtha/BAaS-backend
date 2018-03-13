@@ -36,7 +36,8 @@ module.exports = function initialize() {
                         },
                         "facebookLoginOption": {
                             "isEnabled": false,
-                            "key": ""
+                            "clientID": "",
+                            "clientSecrete": ""
                         }
                     }
                 }
