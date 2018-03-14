@@ -34,6 +34,7 @@
     "passport-facebook": "^2.1.1",
     "passport-google-oauth": "^1.0.0",
     "passport-jwt": "^3.0.1",
+    "tmp": "0.0.33",
     "validator": "^9.2.0",
     "winston": "^3.0.0-rc1"
   }

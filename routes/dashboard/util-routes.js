@@ -30,91 +30,120 @@ router.get('/getApplicationDetails', AuthGuard, (req, res) => {
     });
 });
 
-router.post('/exportToCSV',AuthGuard,(req,res)=>{    
+router.post('/exportToCSV', AuthGuard, (req, res) => {
     const Json2csvParser = require('json2csv').Parser;
     let reqbody = req.body;
-    console.log(reqbody);
-    const fields = ['car', 'color'];
+    //console.log(reqbody.data.collectionName);
+    //console.log(reqbody.data.collectionAttributes);
+    let tableName = reqbody.data.collectionName;
+    const fields = reqbody.data.collectionAttributes;
     const opts = {
         fields
     };
-    const myCars = [
-      {
-        "car": "Audi",
-        "price": 40000,
-        "color": "blue"
-      }, {
-        "car": "BMW",
-        "price": 35000,
-        "color": "black"
-      }, {
-        "car": "Porsche",
-        "price": 60000,
-        "color": "green"
-      }
-    ];
-      const parser = new Json2csvParser(opts);
-      const csv = parser.parse(myCars);
-      //var csv = json2csv({data:'', fields: fields });
-   
-      res.set("Content-Disposition", "attachment;filename=authors.csv");
-      res.set("Content-Type", "application/octet-stream");
-    console.log(csv)
-      //res.send(csv);
-      var fs = require('fs');
-
-    fs.writeFile('demo-sysy.csv', csv, 'utf8', function (err) {
-    if (err) {
-        console.log('Some error occured - file either not saved or corrupted file saved.');
-        res.status(500).send();
-    } else{
-        res.json({
-            success: true,
-            message: "COnverted",
-            data: {
-                url: "demo-sysy.csv"
-            }
-        })
-    }
+    var query = ApplicationsSchemaStructure.findOne({
+        name: tableName
     });
-    // var query = ApplicationsSchemaStructure.findOne({
-    //     //name: tableName
-    // });
-    // query.exec((err, data) => {
-    //     if (err) throw err;
-    //     else if (data !== null) {
-    //         let schema;
-    //         try {
-    //             schema = mongoose.model(tableName);
-    //         } catch (err) {
-    //             schema = ApplicationsSchemaStructure.getSchemaModel(tableName, data.structure);
-    //         }
-    //         query = schema.find();
-    //         query.exec((err, rows) => {
-    //             if (err) throw err;
-    //             else {
-    //                 res.json({
-    //                     success: true,
-    //                     data: {
-    //                         structure: data.structure,
-    //                         rows: rows
-    //                     },
-    //                     message: "Fetch Succesfull!!"
-    //                 });
-    //             }
-    //         });
-    //     } else {
-    //         res.json({
-    //             success: false,
-    //             data: null,
-    //             message: "Nothing found!!"
-    //         });
-    //     }
-    // });
+    query.exec((err, data) => {
+        if (err) throw err;
+        else if (data !== null) {
+            let schema;
+            try {
+                schema = mongoose.model(tableName);
+            } catch (err) {
+                schema = ApplicationsSchemaStructure.getSchemaModel(tableName, data.structure);
+            }
+            query = schema.find();
+            query.exec((err, rows) => {
+                if (err) throw err;
+                else {
+                    console.log(opts);
+                    const parser = new Json2csvParser(opts);
+                    let tempRows = rows.map(item => {
+                        item = JSON.stringify(item);
+                        item = JSON.parse(item);
+                        delete item._id;
+                        console.log(item);
+                        return item;
+                    });
+                    rows = tempRows;
+                    console.log(JSON.stringify(rows));
+                    const csv = parser.parse(rows);
+                    //console.log(csv)
+                    let uploadPath = "temp";
+                    let crypto = require('crypto');
+                    let hash = crypto.createHash('sha256').update((new Date().valueOf()).toString()).digest('base64');
+                    let fileName = tableName+ '_' + hash + '.csv';
+                    //const fs = require('fs');
+                    fs.exists(uploadPath, function (exists) {
+                        if (exists) {
+                            // TODO add here file
+                            console.log("Adding temp file here");
+                            fs.writeFile(uploadPath+'/'+fileName, csv, 'utf8', function (err) {
+                                if (err) {
+                                    console.log('Some error occured - file either not saved or corrupted file saved.');
+                                    res.status(500).send();
+                                } else {
+                                    res.json({
+                                        success: true,
+                                        message: "Converted",
+                                        data: {
+                                            url: "http://"+APP_CONFIG.hostname+":"+APP_CONFIG.port+"/dashboard/utils/tempFile/" + fileName
+                                        }
+                                    });
+                                }
+                            });
+                        } else {
+                            fs.mkdir(uploadPath, function (err) {
+                                if (err) {
+                                    console.log(err);
+                                    console.log("Error in folder creation");
+                                    res.status(500).send();
+                                } else {
+                                    console.log("Adding temp file here");
+                                    fs.writeFile(uploadPath+'/'+fileName, csv, 'utf8', function (err) {
+                                        if (err) {
+                                            console.log('Some error occured - file either not saved or corrupted file saved.');
+                                            res.status(500).send();
+                                        } else {
+                                            res.json({
+                                                success: true,
+                                                message: "COnverted",
+                                                data: {
+                                                    url: "http://localhost:4000/api/export/tempFile/" + fileName
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        } else {
+            res.json({
+                success: false,
+                data: null,
+                message: "Nothing found!!"
+            });
+        }
+    });
+
+});
+
+router.get('/tempFile/:fileId', (req, res) => {
+    let fileId = req.params.fileId;
+    if (fileId) {
+        console.log(fileId)
+        res.sendFile(path.join(__dirname, '../../temp', fileId));
+        //fs.unlinkSync(path.join(__dirname, '../../temp', fileId));
+    } else {
+        res.status(404).send();
+    }
 });
 
 router.get('/logs', (req, res) => {
-    let logs = logger.getFreshLOG();    
+    let logs = logger.getFreshLOG();
     res.json({
         success: true,
         logs: logs,
