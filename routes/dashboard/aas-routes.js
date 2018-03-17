@@ -10,9 +10,9 @@ const aasJSON=require("../../config/aasJSON/index");
 
 //Analytics Route
 router.get('/',(req,res)=>{res.send("OK");})
-router.post('/createAnalyticsSchema',(req,res)=>{ 
-   
-    let schema = req.body;    	
+router.post('/createAnalyticsSchema',AuthGuard,(req,res)=>{ 
+    let schema = req.body;    
+	console.log(schema);
     schema.structure = {};
     if(schema && schema.name && schema.data) {
         let newSchema = new AnalyticsSchemaStructure(schema);
@@ -43,9 +43,9 @@ router.post('/createAnalyticsSchema',(req,res)=>{
         });
     }
 });
-
-router.get('/getAnalyticsSchemas',AuthGuard,(req,res)=>{        
-    let query = AnalyticsSchemaStructure.find();    
+router.get('/getAnalyticsSchemas',(req,res)=>{        
+    let query = AnalyticsSchemaStructure.find();
+    //query.select('name');
     query.exec((err,schemas)=>{
         if(err) throw err
         else {
