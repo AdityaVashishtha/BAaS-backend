@@ -134,20 +134,14 @@ router.post("/register", (req, res) => {
             } else {
                 res.json({
                     success: false,
-                    exception: {
-                        exceptionType: "NotValidEmail",
-                        exceptionMessage: "Provide string was not a valid Username/Email"
-                    }
+                    message: "Not a valid email address"
                 });
             }
         });
     } else {
         res.json({
             success: false,
-            exception: {
-                exceptionType: "BodyEmpty",
-                exceptionMessage: "Request body for register was empty."
-            }
+            message: "Request body for register was empty."
         });
     }
 });
@@ -245,10 +239,7 @@ router.post("/login", (req, res) => {
     } else {
         res.json({
             success: false,
-            exception: {
-                exceptionType: "BodyEmpty",
-                exceptionMessage: "Request body for login was empty."
-            }
+            message: "Request body was empty"
         });
     }
 });

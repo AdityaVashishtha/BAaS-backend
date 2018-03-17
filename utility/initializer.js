@@ -41,7 +41,8 @@ module.exports = function initialize() {
                         }
                     }
                 }
-            };
+            }
+        ;
             let newConfig = ApplicationConfig(config);
             newConfig.save((err) => {
                 if (err) {

@@ -37,7 +37,7 @@ if (APP_CONFIG.needInitialization)
 //Middleware setup
 app.use(cors());
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'dashboard-ui')));
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 
@@ -69,7 +69,8 @@ app.use(passport.session());
 
 require('./config/passport')(passport);
 
-app.get('/dashboard/hitCount', hitCount, (req, res) => {
+app.get('/dashboard/hitCount', hitCount,(req, res) => {
+    //console.log(lastHitCounts);
     res.json({
         count: lastHitCounts
     });
@@ -77,7 +78,7 @@ app.get('/dashboard/hitCount', hitCount, (req, res) => {
 
 //Application Routing and middleware setup
 app.use('/api', hitCount, apiRoute);
-app.use('/dashboard', hitCount, dashboardRoute);
+app.use('/dashboard', hitCount,dashboardRoute);
 
 
 app.get('/', (req, res) => {
