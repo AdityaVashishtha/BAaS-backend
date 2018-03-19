@@ -28,6 +28,20 @@ router.post("/:schema/:routeName", (req, res) => {
       } else if (data.accessControl == "admin") {
         isLoggedIn = require("../config/passport").isLoggedIn(token);
       }
+      let isUserSessionEnabled;
+      if(data.userBasedSession && data.userBasedSession.isEnable) { 
+          req.user = returnUserFromToken(token);               
+          isUserSessionEnabled = UtilityFunction.checkForUserBasedSession(req.body, data, req.user);
+          //console.log(req.user)
+          if (typeof isUserSessionEnabled == 'object') {
+              req.body = isUserSessionEnabled;
+              isLoggedIn = true;
+              //console.log('Request After Custom User based session');
+              //console.log(req.body);
+          } else if(isUserSessionEnabled === false) {
+              isLoggedIn = false;
+          }
+      }
       if (isLoggedIn && data.operationType === "update") {
         let Schema, query;
         try {
@@ -149,6 +163,16 @@ function loggedIn(token) {
       console.log(decoded);
       return true;
     }
+  });
+}
+
+function returnUserFromToken(token) {
+  return jwt.verify(token, APP_CONFIG.app_secret, function (err, decoded) {
+      if (err) {
+          return false;
+      } else if (decoded.authType = 'api.user') {
+          return decoded;
+      }
   });
 }
 

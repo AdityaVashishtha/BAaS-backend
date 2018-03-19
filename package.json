@@ -23,18 +23,25 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.18.2",
+    "cookie-parser": "^1.4.3",
     "cors": "^2.8.4",
     "express": "^4.16.2",
+    "json2csv": "^4.0.2",
     "jsonwebtoken": "^8.1.0",
     "mongodb": "^3.0.1",
     "mongoose": "^5.0.0-rc1",
     "multer": "^1.3.0",
+    "nodemailer": "^4.6.2",
     "passport": "^0.4.0",
     "passport-facebook": "^2.1.1",
     "passport-google-oauth": "^1.0.0",
     "passport-jwt": "^3.0.1",
+<<<<<<< HEAD
     "request": "^2.85.0",
     "request-promise": "^4.2.2",
+=======
+    "tmp": "0.0.33",
+>>>>>>> 03cc220fa7736ddb79042b8081803a50282698be
     "validator": "^9.2.0",
     "winston": "^3.0.0-rc1"
   }

@@ -16,27 +16,34 @@ router.post('/createAnalyticsSchema',(req,res)=>{
     let schema = req.body;    
 	console.log(schema);
     schema.structure = {};
-    let newSchema = new AnalyticsSchemaStructure(schema);
-    let query = { name: schema.name };
-    AnalyticsSchemaStructure.findOne(query,(err,schema)=>{
-        if(err) throw err;
-        else if(schema) {
-            res.json({
-                success: false,
-                message: "Schema with same name exist!!"                
-            });
-        } else {
-            newSchema.save((err)=>{
-                if (err) throw err;
-                else {                                       
-                    res.json({
-                        success: true,
-                        message: "Analytics Schema Created Successfully!!"                
-                    });
-                }
-            });        
-        }
-    });
+    if(schema && schema.name && schema.data) {
+        let newSchema = new AnalyticsSchemaStructure(schema);
+        let query = { name: schema.name };
+        AnalyticsSchemaStructure.findOne(query,(err,schema)=>{
+            if(err) throw err;
+            else if(schema) {
+                res.json({
+                    success: false,
+                    message: "Schema with same name exist!!"                
+                });
+            } else {
+                newSchema.save((err)=>{
+                    if (err) throw err;
+                    else {                                       
+                        res.json({
+                            success: true,
+                            message: "Analytics Schema Created Successfully!!"                
+                        });
+                    }
+                });        
+            }
+        });
+    } else {
+        res.json({
+            success: false,
+            message: "Request body empty!!"        
+        });
+    }
 });
 router.get('/getAnalyticsSchemas',(req,res)=>{        
     let query = AnalyticsSchemaStructure.find();
@@ -72,8 +79,7 @@ router.get('/getAnalyticsSchema/:analyticsName',(req,res)=>{
 router.post('/addAnalyticsStructure',(req,res)=>{
     let analyticsName = req.body.name;
     let query = {name: analyticsName};
-    AnalyticsSchemaStructure.findOne(query,(err,data)=>{
-        //console.log("DDDKD");
+    AnalyticsSchemaStructure.findOne(query,(err,data)=>{        
         if(err) throw err
         else if(data !== null){
             let structure={};
@@ -103,12 +109,12 @@ router.post('/addAnalyticsStructure',(req,res)=>{
         }
     });
 });
-router.get('/getAasJSON',AuthGuard,(req,res)=>{
 
-   res.send(JSON.stringify(aasJSON.steps));
-   
+router.get('/getAasJSON',AuthGuard,(req,res)=>{
+   res.send(JSON.stringify(aasJSON.steps)); 
 });
 
+<<<<<<< HEAD
 router.post('/analytics/train/',(req,res)=>{
     console.log(config.pythonServer.url + "/analytics/train/"+req.body.analyticsName)
     rp({
@@ -166,4 +172,6 @@ router.post('/analytics/test',AuthGuard,(req,res)=>{
       })
     res.send(200,"TASK STARTED");
 });
+=======
+>>>>>>> 03cc220fa7736ddb79042b8081803a50282698be
 module.exports = router;

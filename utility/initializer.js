@@ -36,11 +36,13 @@ module.exports = function initialize() {
                         },
                         "facebookLoginOption": {
                             "isEnabled": false,
-                            "key": ""
+                            "clientID": "",
+                            "clientSecrete": ""
                         }
                     }
                 }
-            };
+            }
+        ;
             let newConfig = ApplicationConfig(config);
             newConfig.save((err) => {
                 if (err) {

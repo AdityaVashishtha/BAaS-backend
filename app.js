@@ -6,7 +6,7 @@ const passport = require('passport');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const cors = require('cors');
-
+const cookieParser = require('cookie-parser');
 //Custom Requires
 const apiRoute = require('./routes/generated-api-routes');
 const dashboardRoute = require('./routes/dashboard');
@@ -36,7 +36,8 @@ if (APP_CONFIG.needInitialization)
 
 //Middleware setup
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'dashboard-ui')));
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 
@@ -68,7 +69,8 @@ app.use(passport.session());
 
 require('./config/passport')(passport);
 
-app.get('/dashboard/hitCount', hitCount, (req, res) => {
+app.get('/dashboard/hitCount', hitCount,(req, res) => {
+    //console.log(lastHitCounts);
     res.json({
         count: lastHitCounts
     });
@@ -76,7 +78,7 @@ app.get('/dashboard/hitCount', hitCount, (req, res) => {
 
 //Application Routing and middleware setup
 app.use('/api', hitCount, apiRoute);
-app.use('/dashboard', hitCount, dashboardRoute);
+app.use('/dashboard', hitCount,dashboardRoute);
 
 
 app.get('/', (req, res) => {

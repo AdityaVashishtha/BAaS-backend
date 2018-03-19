@@ -14,8 +14,8 @@ module.exports = function (passport) {
         if (err) throw err;
         if (authConfig) {
             let googleOptions = authConfig.googleLoginOption;
-            const GOOGLE_CLIENT_ID = googleOptions.clientID.trim();
-            const GOOGLE_CLIENT_SECRET = googleOptions.clientSecrete.trim();       
+            const GOOGLE_CLIENT_ID = googleOptions.clientID;
+            const GOOGLE_CLIENT_SECRET = googleOptions.clientSecrete;       
             if(googleOptions.isEnabled) {
                 passport.use(new GoogleStrategy({
                     clientID: GOOGLE_CLIENT_ID,
