@@ -1,16 +1,18 @@
 const express = require('express');
 const passport = require('passport');
 const mongoose = require('mongoose');
+const rp = require("request-promise")
 //Require Models to use
 const logger = require('../../utility/logger');
 const AuthGuard = require('../../config/passport').isAuthenticated(passport);
 const AnalyticsSchemaStructure = require('../../config/models/analytics-schema-structure');
 const router = express.Router();
 const aasJSON=require("../../config/aasJSON/index");
+const config= require("../../config/config.json");
 
 //Analytics Route
 router.get('/',(req,res)=>{res.send("OK");})
-router.post('/createAnalyticsSchema',AuthGuard,(req,res)=>{ 
+router.post('/createAnalyticsSchema',(req,res)=>{ 
     let schema = req.body;    
 	console.log(schema);
     schema.structure = {};
@@ -105,5 +107,63 @@ router.get('/getAasJSON',AuthGuard,(req,res)=>{
 
    res.send(JSON.stringify(aasJSON.steps));
    
+});
+
+router.post('/analytics/train/',(req,res)=>{
+    console.log(config.pythonServer.url + "/analytics/train/"+req.body.analyticsName)
+    rp({
+        method : "GET",
+        uri : config.pythonServer.url + "/analytics/train/"+req.body.analyticsName,
+        json : true
+      })
+      .then(function(response){
+        console.log("====in response=====")
+        console.log(JSON.stringify(response))
+        
+      })
+      .catch(function(error){
+            console.log("in error:")
+           // console.log(error)
+      })
+    res.send(200,"TASK STARTED");
+});
+
+router.post('/analytics/finalTrain',AuthGuard,(req,res)=>{
+    console.log(config.pythonServer.url + "/analytics/finalTrain/"+req.user.username+'/'+req.body.analyticsName)
+    rp({
+        method : "GET",
+        uri : config.pythonServer.url + "/analytics/finalTrain/"+req.user.username+'/'+req.body.analyticsName,
+        json : true
+      })
+      .then(function(response){
+        console.log("====in response=====")
+        console.log(JSON.stringify(response))
+        
+      })
+      .catch(function(error){
+            console.log("in error:")
+           // console.log(error)
+      })
+    res.send(200,"TASK STARTED");
+});
+
+router.post('/analytics/test',AuthGuard,(req,res)=>{
+    console.log(config.pythonServer.url + "/analytics/test/"+req.user.username+'/'+req.body.analyticsName)
+    rp({
+        method : "POST",
+        uri : config.pythonServer.url + "/analytics/test/"+req.user.username+'/'+req.body.analyticsName,
+        body:req.body.test,
+        json : true
+      })
+      .then(function(response){
+        console.log("====in response=====")
+        console.log(JSON.stringify(response))
+        
+      })
+      .catch(function(error){
+            console.log("in error:")
+           // console.log(error)
+      })
+    res.send(200,"TASK STARTED");
 });
 module.exports = router;
