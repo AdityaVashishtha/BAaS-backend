@@ -114,7 +114,6 @@ router.get('/getAasJSON',AuthGuard,(req,res)=>{
    res.send(JSON.stringify(aasJSON.steps)); 
 });
 
-<<<<<<< HEAD
 router.post('/analytics/train/',(req,res)=>{
     console.log(config.pythonServer.url + "/analytics/train/"+req.body.analyticsName)
     rp({
@@ -172,6 +171,4 @@ router.post('/analytics/test',AuthGuard,(req,res)=>{
       })
     res.send(200,"TASK STARTED");
 });
-=======
->>>>>>> 03cc220fa7736ddb79042b8081803a50282698be
 module.exports = router;
