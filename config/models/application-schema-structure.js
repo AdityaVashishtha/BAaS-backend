@@ -234,6 +234,7 @@ function isValid(value, structure) {
     let type = structure.type;
     let pattern = structure.regexPattern;
     let enumValues = structure.enumValues;
+    let tempValue = value;        
     value = value.toString().trim();
     if (value.length <= 0)
         return true;
@@ -245,6 +246,7 @@ function isValid(value, structure) {
         case 'boolean':
             return validator.isBoolean(value);
         case 'json':
+            value = JSON.stringify(tempValue);            
             return validator.isJSON(value);
         case 'enum':
             if(enumValues) {
@@ -263,6 +265,7 @@ function isValid(value, structure) {
         case 'hexadecimal-number':
             return validator.isHexadecimal(value);
         case 'array':
+                    value = JSON.stringify(tempValue);
                     if(validator.isJSON(value))
                         return (JSON.parse(value).constructor == Array);
                     else 
@@ -287,6 +290,7 @@ function isValid(value, structure) {
 }
 
 function convertToStandard(value, type) {
+    let tempValue = value;
     value = value.toString().trim();
     //console.log(value);
     if (value.length <= 0)
@@ -299,7 +303,7 @@ function convertToStandard(value, type) {
         case 'boolean':
             return value == 'true' ? true : false;
         case 'json':
-            return JSON.stringify(JSON.parse(value));
+            return JSON.stringify(tempValue);
         case 'enum':
             return value;            
         case 'date-iso':
@@ -313,7 +317,7 @@ function convertToStandard(value, type) {
         case 'hexadecimal-number':
             return value;
         case 'array':
-            return value;
+            return JSON.stringify(tempValue);
         case 'alphanumeric-only':
             return value;
         case 'email':

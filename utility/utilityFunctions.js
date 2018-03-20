@@ -67,9 +67,9 @@ module.exports.checkForUserBasedSession = function(request, routeStructure, user
             if (
                 userSession[tempConstraint.replaceWith] &&
                 userSession[tempConstraint.replaceWith] != null
-              ) {                                
-                if (request[tempConstraint.replaceKey]) {
-                  console.log('All set replace text in request');                    
+              ) {
+                console.log('All set replace text in request');                    
+                if (request[tempConstraint.replaceKey]) {                  
                   //request = JSON.parse(JSON.stringify(request).replace('$__'+keys[i],userSession[keys[i]]));
                   request[tempConstraint.replaceKey] = userSession[tempConstraint.replaceWith];                                                                  
                 } if(request.updateDoc && request.updateDoc[tempConstraint.replaceKey]) {
