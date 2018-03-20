@@ -134,4 +134,14 @@ function loggedIn(token) {
     });
 }
 
+function returnUserFromToken(token) {
+    return jwt.verify(token, APP_CONFIG.app_secret, function (err, decoded) {
+        if (err) {
+            return false;
+        } else if (decoded.authType = 'api.user') {
+            return decoded;
+        }
+    });
+}
+
 module.exports = router
