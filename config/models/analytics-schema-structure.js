@@ -12,7 +12,10 @@ const AnalyticsSchema = mongoose.Schema({
 	},
     structure: {
         type: Object,
-	},
+    },
+    user:{
+        type: String
+    },
     createdAt: {
         type:Date,    
     },    

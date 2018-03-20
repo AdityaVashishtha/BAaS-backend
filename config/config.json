@@ -11,5 +11,8 @@
         "port": 27017,
         "username": "",
         "password": ""
-    }        
+    } ,
+    "pythonServer":{
+        "url":"http://localhost:5000"
+    }   
 }
