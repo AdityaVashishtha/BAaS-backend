@@ -189,7 +189,7 @@ router.post('/analytics/train/getStatus',(req,res)=>{
             //console.log(schemas)
             res.json({
                 success: true,
-                status: schema.status,
+                status: schema.status||"Not trained",
                 schema: schema
             });
         }
