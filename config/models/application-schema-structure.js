@@ -93,7 +93,7 @@ function schemaMatch(row, structure, schemaName, callback) {
     }
     //Matching required Constraint
     console.log('Matching Required Constraint');
-    for (i = 0; i < structureKeysLength; i++) {
+    for (i = 0; (i < structureKeysLength) && (!isUpdateRoute); i++) {
         let index_key = structureKeys[i];        
         console.log("Is update route "+isUpdateRoute);
         if (structure[index_key].isRequired || structure[index_key].isUnique) {                
@@ -117,7 +117,7 @@ function schemaMatch(row, structure, schemaName, callback) {
         }
     }
     //Matching Unique key constraint
-    console.log('Matching Unique Attribute Property ...' + bodyKeysLength);
+    console.log('Matching Unique Attribute Property ... ' + bodyKeysLength);
     waterfall(
         bodyKeys.map((item) => {
             return function (res, done) {
@@ -190,7 +190,7 @@ function schemaMatch(row, structure, schemaName, callback) {
                 } else if ((typeof result == 'undefined')) {
                     callback({
                         error: true,
-                        message: "Some error in insert request"
+                        message: "Some error in Insert/Update request"
                     })
                 } else {
                     callback({

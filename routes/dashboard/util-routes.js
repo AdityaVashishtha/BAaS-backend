@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
+const multer = require('multer');
+
 //Require Models to use
 const logger = require('../../utility/logger');
 const DashboardUser = require('../../config/models/dashboard-user');
@@ -15,10 +17,40 @@ const ApplicationConfig = require('../../config/models/application-config');
 //after routes added
 const RouteStructure = require('../../config/models/route-structure');
 const AuthRoute = require('../dashboard/auth');
+
 // Declaration of constants 
 USER_TABLE_NAME = 'authuser';
+const TEMP_UPLOAD_DIRECTORY = './temp';
+
+
+//MULTER INITIALIZATION FOR FILE UPLOAD
+var storage = multer.diskStorage({
+    // destination
+    destination: function (req, file, cb) {
+        console.log("TEMP_UPLOAD_DIRECTORY")
+        cb(null, TEMP_UPLOAD_DIRECTORY)
+    },
+    filename: function (req, file, cb) {
+      cb(null, new Date().valueOf() +'_'+file.originalname);
+    }
+});
+  
+var upload = multer({
+    storage: storage,
+    fileFilter: fileFilter
+});
 
 const router = express.Router();
+
+function fileFilter(req, file, cb) {
+    console.log(file);
+    if(file.mimetype == 'text/csv') {
+        cb(null,true);
+    } else {
+        cb(null,false);
+    }
+}
+
 
 
 //Utilities
@@ -129,6 +161,135 @@ router.post('/exportToCSV', AuthGuard, (req, res) => {
         }
     });
 
+});
+
+//TODO add import to csv code to import schema
+router.post('/importFromCSV/:schemaName',upload.single("uploadCSV"),(req,res)=>{
+    let schemaName = req.params.schemaName;
+    if(req.file && schemaName) {
+        let file = req.file;
+        var Converter = require("csvtojson").Converter;
+        var converter = new Converter({});
+        converter.fromFile(file.path,function(err,result){
+            if(err){
+                console.log("An Error Has Occured");
+                console.log(err);
+                res.json({
+                    success: false,
+                    message: "Some error has occured",
+                    error: err
+                });
+            } else {
+                if(result.length > 0) {
+                    fs.unlinkSync(file.path);
+                    let keys = Object.keys(result[0]);
+                    let structure = {
+                        _id: {
+                            "name" : "_id",
+                            "type" : "id",
+                            "isRequired" : true,
+                            "isUnique" : true,
+                            "default" : "",
+                            "encryptInHash" : false,
+                            "regexPattern" : "",
+                            "enumValues" : [ ]
+                        },
+                        _insertAt: {
+                            "name" : "_insertAt",
+                            "type" : "date",
+                            "isRequired" : true,
+                            "isUnique" : false,
+                            "default" : "",
+                            "encryptInHash" : false,
+                            "regexPattern" : "",
+                            "enumValues" : [ ]
+                        },
+                        _updated: {
+                            "name" : "_updated",
+                            "type" : "date",
+                            "isRequired" : true,
+                            "isUnique" : false,
+                            "default" : "",
+                            "encryptInHash" : false,
+                            "regexPattern" : "",
+                            "enumValues" : [ ]
+                        }
+                    };
+                    for(i=0;i<keys.length;i++) {
+                        let attrName = keys[i];
+                        structure[attrName] = {
+                            "name" : attrName,
+                            "type" : "string",
+                            "isRequired" : false,
+                            "isUnique" : false,
+                            "default" : "",
+                            "encryptInHash" : false,
+                            "regexPattern" : "",
+                            "enumValues" : [ ]
+                        }
+                    }
+                    let schema = {
+                        name: schemaName,
+                        structure: structure
+                    }
+                    console.log(result)
+                    result = result.map(item=> {
+                        item._insertAt = new Date().toString();
+                        item._updated = new Date().toString();
+                        return item;
+                    });
+                    let schemaStructure = new ApplicationsSchemaStructure(schema);
+                    schemaStructure.save(err=>{
+                        if(err) {
+                            console.log(err);
+                            res.json({
+                                success: false,
+                                message: 'Some error in insertion of structure',
+                                error: err
+                            });
+                        } else {
+                            let SchemaModel;
+                            try {
+                                SchemaModel = mongoose.model(schemaName);
+                            } catch (err) {
+                                SchemaModel = ApplicationsSchemaStructure.getSchemaModel(schemaName, {
+                                    any: {}
+                                });
+                            }
+                            // let docs = new SchemaModel(result);
+                            console.log(result)
+                            SchemaModel.collection.insertMany(result,(err,docs)=> {
+                                if(err) {
+                                    console.log(err);
+                                    res.json({
+                                        success: false,
+                                        message: 'Some error in insertion of data',
+                                        error: err
+                                    });
+                                } else {
+                                    res.json({
+                                        success: true,
+                                        message: "CSV file imported successfully!!"
+                                    });
+                                }
+                            });                           
+                        }
+                    });
+                } else {
+                    res.json({
+                        success: false,
+                        message: "Error parsing csv no data present!!"
+                    });
+                }
+            }            
+        });
+        //res.json({test: true});
+    } else {
+        res.json({
+            success:false,
+            message: 'Invalid file type'
+        });
+    }
 });
 
 router.get('/tempFile/:fileId', (req, res) => {
