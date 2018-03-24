@@ -164,6 +164,8 @@ router.get('/verifyToken/:token',(req,res)=>{
                 query = {
                     identifier: decoded.identifier
                 };
+                delete decoded.iat;
+                delete decoded.exp;
                 let newUserRow = Schema(decoded);
                 newUserRow.save(err => {
                     if (err) console.log(err);
