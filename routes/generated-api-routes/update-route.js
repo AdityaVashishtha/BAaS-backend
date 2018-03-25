@@ -10,6 +10,8 @@ const RouteStructure = require("../../config/models/route-structure");
 const ApplicationConfig = require("../../config/models/application-config");
 const APP_CONFIG = require("../../config/application");
 const UtilityFunction = require("../../utility/utilityFunctions");
+
+
 router.post("/:schema/:routeName", (req, res) => {
   let token = "",
     isLoggedIn = false;
@@ -160,7 +162,7 @@ function loggedIn(token) {
     if (err) {
       return false;
     } else if ((decoded.authType = "api.user")) {
-      console.log(decoded);
+      //console.log(decoded);
       return true;
     }
   });

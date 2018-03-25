@@ -240,17 +240,17 @@ function checkForUserBasedSession(request, routeStructure, userSession) {
     if (routeStructure.userBasedSession && routeStructure.userBasedSession.isEnable) {
         console.log("User Based Session Enabled");
         if (requestSession && ((userSession != null && userSession))) {
-            console.log("User Based Session Enabled");
+            //console.log("User Based Session Enabled");
             let keys = (routeStructure.userBasedSession.sessionAttribute);
             for (let i = 0; i < keys.length; i++) {
-                console.log('keys ' + keys[i]);
+                //console.log('keys ' + keys[i]);
                 if (requestSession[keys[i]]) {
-                    console.log("Session Check " + userSession[keys[i]] + "  " + requestSession[keys[i]]);
+                    //console.log("Session Check " + userSession[keys[i]] + "  " + requestSession[keys[i]]);
                     if (userSession[keys[i]] != requestSession[keys[i]]) {
                         return false;
                     } else {
                         //TODO Add user session variable as insert value
-                        console.log('Before replace text');
+                        //console.log('Before replace text');
                         if (request[keys[i]]) {
                             //console.log(request);
                             //request = JSON.parse(JSON.stringify(request).replace('$__'+keys[i],userSession[keys[i]]));
@@ -268,7 +268,7 @@ function checkForUserBasedSession(request, routeStructure, userSession) {
             return false;
         }
     } else {
-        console.log("User Based Session Disabled");
+        //console.log("User Based Session Disabled");
         return true;
     }
     return request;

@@ -48,7 +48,14 @@ router.post('/addRoute', AuthGuard, (req, res) => {
         schemaName: routeData.schemaName
     };    
     RouteStructure.findOne(query, (err, data) => {
-        if (err) throw err;
+        if (err) {
+            logger.ERROR(err);
+            res.json({
+                success: false,
+                message: "Some error occured",
+                err: err
+            });
+        }
         else if (data) {
             res.json({
                 success: false,
@@ -75,7 +82,14 @@ router.post('/deleteRoute', AuthGuard, (req, res) => {
             schemaName: req.body.schemaName
         };
         RouteStructure.remove(query, (err, data) => {
-            if (err) throw err;
+            if (err) {
+                logger.ERROR(err);
+                res.json({
+                    success: false,
+                    message: "Some error occured",
+                    err: err
+                });
+            }
             else if (data != null && data.n > 0) {
                 res.json({
                     success: true,
@@ -102,7 +116,14 @@ router.post('/getRoutes', AuthGuard, (req, res) => {
         schemaName: schemaName
     };
     RouteStructure.find(query, (err, data) => {
-        if (err) throw err;
+        if (err) {
+            logger.ERROR(err);
+            res.json({
+                success: false,
+                message: "Some error occured",
+                err: err
+            });
+        }
         else if (data) {
             res.json({
                 success: true,

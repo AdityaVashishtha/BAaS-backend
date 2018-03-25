@@ -13,7 +13,14 @@ router.get('/getAuthenticationConfig', (req, res) => {
     ApplicationConfig.findOne({
         name: 'auth'
     }, (err, config) => {
-        if (err) throw err;
+        if (err){
+            logger.ERROR(err);
+            res.json({
+                success: false,
+                message: "Some error occured",
+                err: err
+            });
+        }
         else if (config != null) {
             res.json({
                 success: true,

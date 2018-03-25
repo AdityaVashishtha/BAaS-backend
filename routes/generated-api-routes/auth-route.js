@@ -39,7 +39,7 @@ function sendMail(receiver, content, done) {
             subject: `Email Verficiation for ${APP_CONFIG.appName}`,
             html: content
         };
-        console.log(process.env.BAAS_USER_ID,' ',process.env.BAAS_EMAIL_KEY);
+        //console.log(process.env.BAAS_USER_ID,' ',process.env.BAAS_EMAIL_KEY);
         transporter.sendMail(mailOptions, function (error, info) {
             if (error) {
                done(error, false)
@@ -100,7 +100,6 @@ router.post("/register", (req, res) => {
                                 }
                             });
                         } else {
-                            console.log("THSSS");
                             jwt.sign(
                                 newUserRow._doc,
                                 APP_CONFIG.app_secret, {
@@ -153,7 +152,7 @@ router.get('/verifyToken/:token',(req,res)=>{
             if (err) {
                 res.status(404).send();
             } else if (decoded) {
-                console.log(decoded);
+                //console.log(decoded);
                 let tableName = 'authuser';
                 let Schema;
                 try {
@@ -291,7 +290,7 @@ router.get(
     }),
     function (req, res) {
         let newUser = req.user;
-        console.log(newUser);
+        //console.log(newUser);
         if (newUser == null) {
             res.status(404).send();
         } else {
@@ -342,7 +341,7 @@ router.get(
     function (req, res) {
         //console.log("Google Callback Returned");
         let newUser = req.user;
-        console.log(newUser);
+        //console.log(newUser);
         if (newUser == null) {
             res.status(404).send();
         } else {
@@ -379,7 +378,7 @@ router.get(
 
 router.post("/changePassword", (req, res) => {
     let profile = req.body;
-    console.log(profile);
+    //console.log(profile);
     if (profile && profile != null) {
         let oldPassword = profile.oldPassword;
         let newPassword = profile.newPassword;
@@ -452,9 +451,9 @@ router.post("/changePassword", (req, res) => {
 
 router.get('/getUserFromToken',(req,res)=>{
     token=req.cookies.token;
-    console.log(req.headers)
-    console.log(token)
-    console.log('decoded')
+    //console.log(req.headers)
+    //console.log(token)
+    //console.log('decoded')
     if(token) {
         token = token.trim().split(' ')[1];
         jwt.verify(token, APP_CONFIG.app_secret, function (err, decoded) {
@@ -490,7 +489,7 @@ function loggedIn(token) {
         if (err) {
             return false;
         } else if ((decoded.authType = "api.user")) {
-            console.log(decoded);
+            //console.log(decoded);
             return true;
         }
     });

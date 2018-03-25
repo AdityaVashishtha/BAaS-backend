@@ -9,7 +9,7 @@ const APP_CONFIG = require('../../config/application');
 const UtilityFunction = require("../../utility/utilityFunctions");
 // Default insert route
 router.post('/:schema/:routeName', (req, res) => {
-    console.log(req.body);
+    //console.log(req.body);
     let token = '',
         isLoggedIn = false;
     if (req.headers.authorization)

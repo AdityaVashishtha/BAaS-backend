@@ -77,8 +77,14 @@ router.post('/login', (req, res) => {
     let rUser = req.body;
     //TODO user check in schema logic
     DashboardUser.findUserByUsername(rUser.username, (err, user) => {
-        if (err)
-            console.log(err);
+        if (err){
+            logger.ERROR(err);
+            res.json({
+                success: false,
+                message: "Some error occured",
+                err: err
+            });
+        }
         else if (user) {
             let isMatch = bcrypt.compareSync(rUser.password, user.password);
             if (rUser.isSuper) {
@@ -91,7 +97,14 @@ router.post('/login', (req, res) => {
                 jwt.sign(rUser, APP_CONFIG.app_secret, {
                     expiresIn: '24h'
                 }, function (err, token) {
-                    if (err) throw err;
+                    if (err) {
+                        logger.ERROR(err);
+                        res.json({
+                            success: false,
+                            message: "Some error occured",
+                            err: err
+                        });
+                    }
                     else {
                         let upDoc = {
                             lastSignedIn: new Date()
@@ -99,10 +112,18 @@ router.post('/login', (req, res) => {
                         DashboardUser.findByIdAndUpdate(rUser._id, upDoc, {
                             new: true
                         }, (err, data) => {
-                            if (err) throw err;
+                            if (err){
+                                logger.ERROR(err);
+                                res.json({
+                                    success: false,
+                                    message: "Some error occured",
+                                    err: err
+                                });
+                            }
                             else if (data != null) {
-                                console.log(data);
-                                console.log("user is logging in..");
+                                //console.log(data);
+                                //console.log("user is logging in..");
+                                logger.LOG("User is logging in ...");
                                 res.json({
                                     success: true,
                                     data: {
@@ -143,7 +164,14 @@ router.post('/changePassword', AuthGuard, (req, res) => {
         DashboardUser.findOne({
             username: username
         }, (err, data) => {
-            if (err) throw err;
+            if (err) {
+                logger.ERROR(err);
+                res.json({
+                    success: false,
+                    message: "Some error occured",
+                    err: err
+                });
+            }
             else if (data != null) {
                 let userId = data._doc._id;
                 let salt = bcrypt.genSaltSync(10);            
@@ -152,7 +180,14 @@ router.post('/changePassword', AuthGuard, (req, res) => {
                 if(isMatch) {
                     let upDoc = { password: newHash };
                     DashboardUser.findByIdAndUpdate(userId, upDoc, (err, data) => {
-                        if (err) throw err;
+                        if (err) {
+                            logger.ERROR(err);
+                            res.json({
+                                success: false,
+                                message: "Some error occured",
+                                err: err
+                            });
+                        }
                         else if (data != null) {
                             res.json({
                                 success: true,
@@ -196,9 +231,16 @@ router.post('/updateProfile',AuthGuard,(req,res)=>{
             avatar: req.body.avatar
         }
         DashboardUser.findByIdAndUpdate(userID, updateDoc, {new: true}, (err,data)=>{
-            if(err) throw err;
+            if(err) {
+                logger.ERROR(err);
+                res.json({
+                    success: false,
+                    message: "Some error occured",
+                    err: err
+                });
+            }
             else if(data != null){
-                console.log(data);
+                //console.log(data);
                 res.json({
                     success: true,
                     message: "Profile Saved Successfully!"

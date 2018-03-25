@@ -27,7 +27,7 @@ const TEMP_UPLOAD_DIRECTORY = './temp';
 var storage = multer.diskStorage({
     // destination
     destination: function (req, file, cb) {
-        console.log("TEMP_UPLOAD_DIRECTORY")
+        //console.log("TEMP_UPLOAD_DIRECTORY")
         cb(null, TEMP_UPLOAD_DIRECTORY)
     },
     filename: function (req, file, cb) {
@@ -43,7 +43,7 @@ var upload = multer({
 const router = express.Router();
 
 function fileFilter(req, file, cb) {
-    console.log(file);
+    //console.log(file);
     if(file.mimetype == 'text/csv') {
         cb(null,true);
     } else {
@@ -313,7 +313,7 @@ router.get('/logs', (req, res) => {
 });
 
 router.get('/getUserProfile', AuthGuard, (req, res) => {
-    console.log(req.user);
+    //console.log(req.user);
     res.json({
         test: true
     });

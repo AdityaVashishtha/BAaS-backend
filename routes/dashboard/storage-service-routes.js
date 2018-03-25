@@ -25,6 +25,12 @@ router.get("/getStorageConfig", (req, res) => {
   ApplicationConfig.getStorageConfig((err, config) => {
     if (err) {
       console.log(err);
+      logger.ERROR(err);
+      res.json({
+          success: false,
+          message: "Some error occured",
+          err: err
+      });
     } else if (config) {
       res.json({
         success: true,

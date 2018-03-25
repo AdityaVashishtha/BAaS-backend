@@ -50,14 +50,14 @@ module.exports.layeredValidationBeforeInsert = function (row, schema, callback) 
             schemaMatch(row, data.structure, schema, (response) => {
                 if (response.error) {
                     console.log("Matching Structure Error ...")
-                    console.log(response);
+                    //console.log(response);
                     callback(null, response);
                     return;
                 } else {
                     response = validateTypes(row, data.structure, schema);
                     if (response.error) {
                         console.log("Validation Type Error ...")
-                        console.log(response);
+                        //console.log(response);
                         callback(null, response);
                         return;
                     } else {
@@ -81,7 +81,7 @@ function schemaMatch(row, structure, schemaName, callback) {
     let bodyKeysLength = bodyKeys.length;
     let structureKeysLength = structureKeys.length;
     //Matching body with structure to 
-    console.log('Matching Structure - Body');
+    //console.log('Matching Structure - Body');
     for (i = 0;(i < bodyKeysLength); i++) {        
         if ((typeof structure[bodyKeys[i]]) === 'undefined') {            
             callback({
@@ -92,12 +92,12 @@ function schemaMatch(row, structure, schemaName, callback) {
         }
     }
     //Matching required Constraint
-    console.log('Matching Required Constraint');
+    //console.log('Matching Required Constraint');
     for (i = 0; (i < structureKeysLength) && (!isUpdateRoute); i++) {
         let index_key = structureKeys[i];        
-        console.log("Is update route "+isUpdateRoute);
+        //console.log("Is update route "+isUpdateRoute);
         if (structure[index_key].isRequired || structure[index_key].isUnique) {                
-            console.log(row[index_key]);
+            //console.log(row[index_key]);
             if ((typeof row[index_key] === 'undefined') || row[index_key] === null || ((row[index_key].toString() != null) && (row[index_key].toString().length <= 0 )) ) {
                 callback({
                     error: true,
@@ -112,7 +112,7 @@ function schemaMatch(row, structure, schemaName, callback) {
                 (!row[index_key])
                 ) {
                 // Default when not required and the value of the row is not present
-                console.log("DEFAULT TEST")
+                //console.log("DEFAULT TEST")
                 if((typeof row[index_key] === 'undefined'))
                     row[index_key] = structure[index_key].default;                
         }
@@ -122,11 +122,11 @@ function schemaMatch(row, structure, schemaName, callback) {
     waterfall(
         bodyKeys.map((item) => {
             return function (res, done) {
-                console.log("Outside unique");
+                //console.log("Outside unique");
                 if(done && res != null)
                     done(null,res);
                 else if (structure[item].isUnique) {
-                    console.log("Check unique " + item);
+                    //console.log("Check unique " + item);
                     let attrName = item;
                     let query = {};
                     query[item] = convertToStandard(row[item], structure[item].type);
@@ -135,29 +135,29 @@ function schemaMatch(row, structure, schemaName, callback) {
                         let hash = crypto.createHash('sha256').update(''+row[item]).digest('base64');                        
                         query[item] = hash;
                     }
-                    console.log(query);
+                    //console.log(query);
                     let schema;
                     try {
                         schema = mongoose.model(schemaName);
                     } catch (err) {
                         schema = ApplicationsSchemaStructure.getSchemaModel(schemaName, {});
                     }
-                    console.log("Unique key constraint Check start for " + item);
+                    //console.log("Unique key constraint Check start for " + item);
                     // console.log(query);
                     flag = false;
                     schema.findOne(query, (err, data) => {
                         if (err) throw err;
                         else if (data != null) {
-                            console.log("Not Unique !! Fixed ? ");
-                            console.log(data);
+                            //console.log("Not Unique !! Fixed ? ");
+                            //console.log(data);
                             if (done) {
-                                console.log("SENT Unique !! Fixed ? ");
+                                //console.log("SENT Unique !! Fixed ? ");
                                 done(null, {
                                     error: true,
                                     message: "Error: Attribute '" + attrName + "' is unique no duplicate allowed!",
                                 });
                             } else {
-                                console.log("SENT2 Unique !! Fixed ? ");
+                                //console.log("SENT2 Unique !! Fixed ? ");
                                 res(null, {
                                     error: true,
                                     message: "Error: Attribute '" + attrName + "' is unique no duplicate allowed!",
@@ -185,7 +185,7 @@ function schemaMatch(row, structure, schemaName, callback) {
             if (err) {
                 console.log(err);
             } else {
-                console.log(result);
+                //console.log(result);
                 if (result) {
                     callback(result);
                 } else if ((typeof result == 'undefined')) {
@@ -220,7 +220,7 @@ function validateTypes(row, structure, schemaName) {
             if(structure[bodyKeys[i]].encryptInHash) {
                 let crypto = require('crypto');
                 let hash = crypto.createHash('sha256').update(''+row[bodyKeys[i]]).digest('base64');
-                console.log(row[bodyKeys[i]] + '  ' + hash);
+                //console.log(row[bodyKeys[i]] + '  ' + hash);
                 row[bodyKeys[i]] = hash;
             }
         }
@@ -266,7 +266,9 @@ function isValid(value, structure) {
         case 'hexadecimal-number':
             return validator.isHexadecimal(value);
         case 'array':
-                    value = JSON.stringify(tempValue);
+                    //tempValue = value.toString();
+                    if(typeof tempValue != 'string')
+                        value = JSON.stringify(tempValue);
                     if(validator.isJSON(value))
                         return (JSON.parse(value).constructor == Array);
                     else 

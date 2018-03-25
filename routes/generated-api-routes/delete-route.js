@@ -106,7 +106,7 @@ function loggedIn(token) {
         if (err) {
             return false;
         } else if (decoded.authType = 'api.user') {
-            console.log(decoded);
+            //console.log(decoded);
             return true;
         }
     });
