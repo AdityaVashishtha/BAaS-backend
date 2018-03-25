@@ -112,6 +112,7 @@ function schemaMatch(row, structure, schemaName, callback) {
                 (!row[index_key])
                 ) {
                 // Default when not required and the value of the row is not present
+                console.log("DEFAULT TEST")
                 if((typeof row[index_key] === 'undefined'))
                     row[index_key] = structure[index_key].default;                
         }

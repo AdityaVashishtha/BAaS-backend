@@ -34,8 +34,14 @@ router.post('/register', (req, res) => {
 
     let newUser = new DashboardUser(user);
     DashboardUser.findUserByUsername(user.username, (err, user) => {
-        if (err)
-            console.log(err);
+        if (err) {            
+            logger.ERROR(err);
+            res.json({
+                success:false,
+                message: "Some error occured !!",
+                err: err
+            });
+        }
         else if (user) {
             res.json({
                 success: false,
@@ -76,7 +82,7 @@ router.post('/login', (req, res) => {
         else if (user) {
             let isMatch = bcrypt.compareSync(rUser.password, user.password);
             if (rUser.isSuper) {
-                console.log('Logging if superuser');
+                //console.log('Logging if superuser');
                 isMatch = (rUser.password, user.password);
             }
             if (isMatch) {                               

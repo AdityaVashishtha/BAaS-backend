@@ -6,7 +6,7 @@ module.exports.applyConstraintOnQuery = function(
   s_attr,
   value
 ) {
-  console.log("Applying constraint on values ...");
+  //console.log("Applying constraint on values ...");
   switch (constraint) {
     case "equal":
       query = query.where(s_attr, value);
@@ -49,26 +49,26 @@ module.exports.applyConstraintOnQuery = function(
 
 module.exports.checkForUserBasedSession = function(request, routeStructure, userSession) {
   let requestSession = request.session;
-  console.log("inside check for user based session ..");      
+  //console.log("Inside check for user based session ..");      
   if ( 
       ( request && request != null) &&
       (userSession != null && userSession) 
      ) {
-      console.log("Request not null as well userSession");
+      //console.log("Request not null as well userSession");
       let keys = (routeStructure.userBasedSession.sessionAttribute);
       let numberOfConstraint = routeStructure.userBasedSession.sessionAttribute.length;
       let tempConstraint;
       for (let i = 0; i < numberOfConstraint; i++) {
-          console.log(keys[i]);
+          //console.log(keys[i]);
           tempConstraint = keys[i];
-          console.log(tempConstraint)
+          //console.log(tempConstraint)
           if(tempConstraint && tempConstraint.replaceKey) {
-            console.log("session constraint object");
+            //console.log("session constraint object");
             if (
                 userSession[tempConstraint.replaceWith] &&
                 userSession[tempConstraint.replaceWith] != null
               ) {
-                console.log('All set replace text in request');                    
+                //console.log('All set replace text in request');                    
                 if (request[tempConstraint.replaceKey]) {                  
                   //request = JSON.parse(JSON.stringify(request).replace('$__'+keys[i],userSession[keys[i]]));
                   request[tempConstraint.replaceKey] = userSession[tempConstraint.replaceWith];                                                                  
@@ -80,17 +80,17 @@ module.exports.checkForUserBasedSession = function(request, routeStructure, user
                   request[tempConstraint.replaceKey] = userSession[tempConstraint.replaceWith];
                 }
             } else {
-              console.log("Session is null")
+              //console.log("Session is null")
               return false;
             }
           } else {
-            console.log("Error due to constraint new object");
+            //console.log("Error due to constraint new object");
             return false;
           }                          
       }
   } else {
-    console.log("User session or request is null ..");
-      return false;
+    //console.log("User session or request is null ..");
+    return false;
   }  
   return request;
 }

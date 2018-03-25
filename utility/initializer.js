@@ -101,7 +101,7 @@ module.exports = function initialize() {
                             console.log("Config file rewriting ... Restart server to apply changes");
                             delete APP_CONFIG.needInitialization;
                             delete APP_CONFIG.hash; 
-                            console.log(APP_CONFIG);
+                            //console.log(APP_CONFIG);
                             var fileSystem = require('fs');
                             fileSystem.writeFile('./config/config.json', JSON.stringify(APP_CONFIG, 2, null), function (err) {
                                 if (err) {
