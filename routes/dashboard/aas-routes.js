@@ -126,14 +126,19 @@ router.post('/analytics/train/',(req,res)=>{
       .then(function(response){
         console.log("====in response=====")
         console.log(JSON.stringify(response))
-        
       })
       .catch(function(error){
-            console.log("in error:")
-           // console.log(error)
-           res.send(400)
-      })
-    res.send(200,"TASK STARTED");
+           console.log("In error:")
+           console.log(error)
+           res.status(400).send();
+           return;
+            //    res.json({
+            //        success: false,
+            //        message: "Some error occured",
+            //        err: error
+            //    });
+      });
+      res.status(200).send("TASK STARTED");
 });
 
 router.post('/analytics/finalTrain',(req,res)=>{
@@ -146,14 +151,19 @@ router.post('/analytics/finalTrain',(req,res)=>{
       .then(function(response){
         console.log("====in response=====")
         console.log(JSON.stringify(response))
-        
       })
       .catch(function(error){
-            console.log("in error:")
-           // console.log(error)
-           res.send(400)
-      })
-    res.send(200,"TASK STARTED");
+        console.log("In error:");
+        console.log(error);
+        res.status(400).send();
+        return;
+        // res.json({
+        //     success: false,
+        //     message: "Some error occured",
+        //     err: error
+        // });
+      });
+      res.status(200).send("TASK STARTED");
 });
 
 router.post('/analytics/test',(req,res)=>{
@@ -167,13 +177,20 @@ router.post('/analytics/test',(req,res)=>{
       .then(function(response){
         console.log("====in response=====")
         console.log(JSON.stringify(response))
-        res.send(200,response);
+        res.status(200).send(response);
       })
       .catch(function(error){
-            console.log("in error:")
-           // console.log(error)
-           res.send(400)
-      })
+        console.log("In error:");
+        console.log(error);
+        res.status(400).send();
+        return;
+        // res.json({
+        //     success: false,
+        //     message: "Some error occured",
+        //     err: error
+        // });
+      });
+      //res.status(200).send("TASK STARTED");
 });
 
 router.post('/analytics/train/getStatus',(req,res)=>{

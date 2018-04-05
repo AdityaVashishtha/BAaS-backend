@@ -232,7 +232,7 @@ router.post('/importFromCSV/:schemaName',upload.single("uploadCSV"),(req,res)=>{
                         name: schemaName,
                         structure: structure
                     }
-                    console.log(result)
+                    //console.log(result)
                     result = result.map(item=> {
                         item._insertAt = new Date().toString();
                         item._updated = new Date().toString();

@@ -80,9 +80,13 @@ app.get('/dashboard/hitCount', hitCount,(req, res) => {
 app.use('/api', hitCount, apiRoute);
 app.use('/dashboard', hitCount,dashboardRoute);
 
-
 app.get('/', (req, res) => {
     res.sendStatus(403);
+});
+
+//For Angular app issue
+app.get('*', function(req, res) {
+    res.sendFile(path.join(__dirname, 'dashboard-ui/index.html'));
 });
 
 //App Listening on port
