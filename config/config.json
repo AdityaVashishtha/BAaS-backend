@@ -1,10 +1,9 @@
 {   
-    "author": "johndoe",
-    "hash": "$2a$10$cCOqkp16TVkLrakFGjn.s.rqvmi2Fpfz9mMdP/lI/1wMy/eq/n2va",    
+    "author": "johndoe",    
     "appName": "Bookie",
     "port": 4000,
     "hostname":"localhost",
-    "app_secret":"ApplicationSecretKey",
+    "app_secret":"ApplicationSecretKeyHERE",
     "database": {
         "name": "bookie_db",
         "hostname": "localhost",
